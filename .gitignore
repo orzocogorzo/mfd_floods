@@ -1,0 +1,14 @@
+# virtualenv
+bin/*
+lib/*
+include/*
+
+# py
+__pycache__
+*.pyc
+
+# GDAL
+GDAL-3.0.4.tar.gz
+
+# data
+data/*
