@@ -133,8 +133,8 @@ class MFD (object):
         less = perimetters.min()
         return reduce(lambda a, d: a + (self.pxsize**2/2) * (self.pxsize * less)/2, perimetters, 0)
 
-    def check_volumetry (self, src_alt, tgt_alt, volume):
-        return (self.pxsize**2)/2 * (tgt_alt/2)
+    # def check_volumetry (self, src_alt, tgt_alt, volume):
+    #     return (self.pxsize**2)/2 * (tgt_alt/2)
 
     # def get_current_flood (self, rc, last_flood):
     #     return reduce(
@@ -145,10 +145,10 @@ class MFD (object):
 
     def drainpaths (self, start, flow):
         self.drainages = np.zeros(self.dtm.shape)
-        queue = list()
-        visited = dict()
+        # queue = list()
+        # visited = dict()
         
-        def _drainpaths (rcs, step_drainages):
+        def _drainpaths (rcs, step_drainages, queue=list(), visited=dict()):
             try:
                 next_step = list()
 
@@ -184,7 +184,7 @@ class MFD (object):
                             if new_rc not in visited: next_step.append(new_rc)
                     
                 if len(next_step): queue.append(next_step)
-                if len(queue) > 0: _drainpaths(queue.pop(), step_drainages)
+                if len(queue) > 0: _drainpaths(queue.pop(), step_drainages, queue, visited)
                 return step_drainages
                         
             except KeyboardInterrupt as e:
@@ -208,7 +208,7 @@ class MFD (object):
         for flood in hyd:
             step_drainages = np.zeros(self.drainages.shape)
             step_drainages[start] = float(flood)
-            step_drainages = _drainpaths([start], step_drainages)
+            step_drainages = _drainpaths([start], step_drainages, list(), dict())
             self.drainages = np.where(self.drainages > step_drainages, self.drainages, step_drainages)
 
         return self.drainages
