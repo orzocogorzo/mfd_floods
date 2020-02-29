@@ -65,7 +65,7 @@ def hydrogram (f):
              yield x
              x += step
     
-    timerange = _range(0.0, 1.0, 1e-1)
+    timerange = _range(0.0, 1.0, 1e-2)
     
     def _hydrogram ():
         for t in timerange:
@@ -126,11 +126,10 @@ class MFD (object):
 
         # @debugger("drainpaths")
         # @counter
-        def _drainpaths (rc, step_drainages, queue, visited):
-            try:
-                if rc in visited:
-                    if len(queue) > 0: _drainpaths(queue.pop(0), step_drainages, queue, visited)
-                    return
+        def _drainpaths (rcs, step_drainages, queue, visited):
+            new_step = list()
+            for rc in rcs:
+                if rc in visited: continue
 
                 visited[rc] = True
                 src_flood = step_drainages[rc]
@@ -139,10 +138,9 @@ class MFD (object):
                     src_flood += self.last_step[rc]
                     if src_flood < 1e-2:
                         step_drainages[rc] = src_flood
-                        if len(queue) > 0: _drainpaths(queue.pop(0), step_drainages, queue, visited)
-                        return
+                        continue
                     
-                not_visiteds = [True]*9 # list(map(lambda d: tuple(d) not in visited, rc + self.deltas)) # [True]*9
+                not_visiteds = list(map(lambda d: tuple(d) not in visited, rc + self.deltas)) # [True]*9
                 perimetters = self.get_perimetters(rc, not_visiteds)
                 downslopes = self.get_downslopes(perimetters, not_visiteds)
                 plains = self.get_plains(perimetters, not_visiteds)
@@ -168,7 +166,7 @@ class MFD (object):
                 overflows = np.where(src_flood > volumetries, src_flood - volumetries, 0)
                 overstreams = overflows/overflows.sum() * over_flood if overflows.sum() else np.zeros(volumetries.shape)
                 downstreams = downslopes/downslopes.sum() * drived_flood if downslopes.sum() else np.zeros(volumetries.shape)
-                plainstreams = plains/plains.sum() * drived_flood if downslopes.sum() == 0 else np.zeros(plains.shape)
+                plainstreams = plains/plains.sum() * drived_flood if downslopes.sum() == 0 and plains.sum() > 0 else np.zeros(plains.shape)
 
                 # print("OVERFLOWS: ", overflows)
                 # print("DOWNSTREAMS: ", downstreams)
@@ -180,24 +178,13 @@ class MFD (object):
                     if catchment == 0 or new_rc in visited: continue
                     # print("NEWRC: ", new_rc, "CATCHMENT: ", catchment)
                     step_drainages[new_rc] += catchment
-                    queue.append(new_rc)
-                    # _drainpaths(new_rc, step_drainages, queue, visited)
+                    new_step.append(new_rc)
 
-                # input("Press Enter to continue...")
-                if len(queue) > 0: _drainpaths(queue.pop(0), step_drainages, queue, visited)
+            # input("Press Enter to continue...")
+            if len(new_step) > 0: queue.append(new_step)
+            if len(queue) > 0: _drainpaths(queue.pop(0), step_drainages, queue, visited)
 
-            except ValueError:
-                print("ValueError!!")
-                print_exception()
-            except RecursionError:
-                print("RecursionError!!")
-                print_exception()
-            except Exception:
-                print("Exception!!")
-                print_exception()
-            finally:
-                self.last_step = step_drainages.copy()
-                return step_drainages
+            return step_drainages
 
         try:
             start, visited = self.start_point(src)
@@ -207,16 +194,17 @@ class MFD (object):
             step_drainages = np.zeros(self.drainages.shape)
             total_flood = 0
             for flood in hyd:
-                print(flood)
+                # print(flood)
                 total_flood += flood
                 step_drainages[:,:] = 0
                 step_drainages[start] = float(flood)
                 step_drainages = _drainpaths(
-                    start,
+                    [start],
                     step_drainages,
                     list(),
                     dict(visited)
                 )
+                self.last_step = step_drainages.copy()
                 self.drainages = np.where(self.drainages >= step_drainages, self.drainages, step_drainages)
                 
         except KeyboardInterrupt:
@@ -225,8 +213,8 @@ class MFD (object):
             print("Exception!")
             print_exception()
         finally:
-            # print("INT: ", total_flood)
-            # print("OUT: ", self.drainages.sum())
+            print("INT: ", total_flood)
+            print("OUT: ", self.drainages.sum())
             return self.drainages
 
 
