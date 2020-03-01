@@ -8,7 +8,7 @@ import richdem as rd
 # MODULES
 from matrix import Matrix
 from hydrogram import hydrogram
-from debug import print_exception
+from debug import print_exception, crono
 
 
 class MFD (Matrix):
@@ -42,6 +42,7 @@ class MFD (Matrix):
     def get_downslopes (self, slopes, not_visiteds):
         return self.where(self.log_and(not_visiteds, slopes < 0), slopes*-1, 0)
 
+    @crono
     def drainpaths (self, src, flow):
         self.drainages = self.zeros(self.dtm.shape)
         self.last_step = self.zeros(self.dtm.shape)
@@ -113,11 +114,11 @@ class MFD (Matrix):
             #     list(),
             #     dict(visited)
             # )
-            hyd = hydrogram(flow)
+            hyd = hydrogram(flow, 60)
             step_drainages = self.zeros(self.drainages.shape)
             total_flood = 0
             for flood in hyd:
-                # print(flood)
+                print(flood)
                 total_flood += flood
                 step_drainages[:,:] = 0
                 step_drainages[start] = float(flood)

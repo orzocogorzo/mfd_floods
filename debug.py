@@ -1,6 +1,7 @@
 # SYS
 import sys
 import linecache
+from time import time
 
 # VENDOR
 import numpy as np
@@ -18,3 +19,16 @@ def print_exception ():
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
     print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
+
+
+def crono (fn):
+
+    def wrapper (*args, **kwargs):
+        start = time()
+        res = fn(*args, **kwargs)
+        wasted = time() - start
+        print("[CRONO]: ", wasted)
+        return res
+
+    return wrapper
+    
