@@ -45,7 +45,7 @@ def hydrogram (f):
 
 class MFD (object):
 
-    def __init__ (self, dtm_array, pxsize):
+    def __init__ (self, dtm_array, cellsize):
         self.deltas = np.array([
             (-1, -1), (-1, 0), (-1, +1),
             (0, -1), (0, 0), (0, +1),
@@ -63,7 +63,7 @@ class MFD (object):
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
         rd.FillDepressions(self.dtm, in_place=True)
             
-        self.pxsize = pxsize
+        self.cellsize = cellsize
 
     def start_point (self, rc):
         perimetters = self.get_perimetters(rc, [True]*9)
@@ -79,7 +79,7 @@ class MFD (object):
 
     def get_volumetries (self, flood, perimetters, not_visiteds):
         return np.where(not_visiteds, [
-            (i%2 == 0 and self.pxsize or math.sqrt(self.pxsize**2+self.pxsize**2))**2 * p * .5 * (1/3) * 4
+            (i%2 == 0 and self.cellsize or math.sqrt(self.cellsize**2+self.cellsize**2))**2 * p * .5 * (1/3) * 4
             for i, p in enumerate(perimetters)
         ], 0)
 
@@ -184,3 +184,74 @@ class MFD (object):
             return self.drainages
 
 
+
+
+#       def drainpaths (self, start, flow):
+#         self.drainages = np.zeros(self.dtm.shape)
+#         # queue = list()
+#         # visited = dict()
+        
+#         def _drainpaths (rcs, step_drainages, queue=list(), visited=dict()):
+#             try:
+#                 next_step = list()
+
+#                 for rc in rcs:
+#                     if rc in visited: continue                        
+#                     visited[rc] = True
+                        
+#                     src_flood = step_drainages[rc]
+#                     if src_flood < 1e-1: continue
+                    
+#                     perimetters = self.get_perimetters(rc)
+#                     downslopes = self.get_downslopes(perimetters)
+#                     if len(downslopes) == 0:
+#                         src_flood = self.drainages[rc] - self.drainages[(
+#                             self.deltas[perimetters.argmin()][0],
+#                             self.deltas[perimetters.argmin()][1]
+#                         )] + src_flood
+#                         overflow = src_flood - self.get_volumetry(perimetters)
+#                         if overflow > 0:
+#                             delta = self.deltas[perimetters.argmin()]
+#                             new_rc = (rc[0] + delta[0], rc[1] + delta[1])
+#                             step_drainages[new_rc] += overflow
+#                             if new_rc not in visited: next_step.append(new_rc)
+#                     else:
+
+#                         t_downslopes = min(sum(downslopes.values()), 0)
+                        
+#                         for delta in downslopes:
+#                             new_rc = (rc[0] + delta[0], rc[1] + delta[1])
+#                             catchment_factor = downslopes[delta] / t_downslopes
+#                             new_catchment = catchment_factor * src_flood
+#                             step_drainages[new_rc] += new_catchment
+#                             if new_rc not in visited: next_step.append(new_rc)
+                    
+#                 if len(next_step): queue.append(next_step)
+#                 if len(queue): _drainpaths(queue.pop(), step_drainages, queue, visited)
+#                 return step_drainages
+                        
+#             except KeyboardInterrupt as e:
+#                 print("KeyboardInterrupt!!")
+#                 return step_drainages
+#             except ValueError as e:
+#                 print("ValueError!!")
+#                 print(e)
+#                 return step_drainages
+#             except RecursionError as e:
+#                 print("RecursionError!!")
+#                 print(e)
+#                 return step_drainages
+#             except Exception as e:
+#                 print("Exception!!")
+#                 print(e)
+#                 return step_drainages
+                
+        
+#         hyd = hydrogram(flow)
+#         for flood in hyd:
+#             step_drainages = np.zeros(self.drainages.shape)
+#             step_drainages[start] = float(flood)
+#             step_drainages = _drainpaths([start], step_drainages, list(), dict())
+#             self.drainages = np.where(self.drainages > step_drainages, self.drainages, step_drainages)
+
+#         return self.drainages
