@@ -35,7 +35,7 @@ def write_file (filename, data, ref_file):
     ds.SetGeoTransform(geotransform)
     band = ds.GetRasterBand(1)
     band.WriteArray(data)
-    band.SetNoDataValue(0)
+    band.SetNoDataValue(0.0)
     ds.SetProjection(projection)
     band.FlushCache()
     
