@@ -42,7 +42,7 @@ def write_file (filename, data, ref_file):
     print("data saved as %s" % "data/"+filename)
 
 
-def test (lng, lat, flow):
+def test (lng, lat, maxflow, flow):
     ds = gdal.Open("data/dtm.tif")
     geotransform = ds.GetGeoTransform()
     row = int((geotransform[3] - lat)/5)
@@ -50,12 +50,13 @@ def test (lng, lat, flow):
     band = ds.GetRasterBand(1)
     dtm = band.ReadAsArray()
     model = gen_model(dtm, 5)
-    drainpath = model.drainpaths((row, col), flow)
+    drainpath = model.drainpaths((row, col), maxflow, flow)
     write_file("drainpath_%s-%s.tif" % (lat, lng), drainpath, "dtm.tif")
 
 
 if __name__ == "__main__":
     lng = float(sys.argv[1])
     lat = float(sys.argv[2])
-    flow = int(sys.argv[3])
-    test(lng, lat, flow)
+    maxflow = int(sys.argv[3])
+    flow = int(sys.argv[4])
+    test(lng, lat, maxflow, flow)
