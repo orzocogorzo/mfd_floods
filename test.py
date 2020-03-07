@@ -2,24 +2,24 @@ import numpy as np
 from osgeo import gdal
 from mfd import MFD
 import sys
-
-
-def gen_model (data, pxsize):
-    return MFD(data, pxsize)
     
 
-# def open_file (filename):
-#     ds = gdal.Open("data/" + filename)
-#     band = ds.GetRasterBand(1)
-    # return band.ReadAsArray()
+def openf (filename):
+    return gdal.Open("data/" + filename)
 
-    
-def geotransform (filename):
-    ds = gdal.Open("data/" + filename)
+
+def get_geotrans (filename=None, ds=None):
+    ds = ds or gdal.Open("data/" + filename)
     return ds.GetGeoTransform()
 
 
-def write_file (filename, data, ref_file):
+def get_rowcol (lng, lat, ds=None, filename=None):
+    ds = ds or openf(filename)
+    geotransform = get_geotrans(filename=filename, ds=ds)
+    return (int((geotransform[3] - lat)/5), int((lng - geotransform[0])/5))
+
+
+def writef (filename, data, ref_file):
     ref_ds = gdal.Open("data/"+ref_file)
     geotransform = ref_ds.GetGeoTransform()
     projection = ref_ds.GetProjection()
@@ -43,15 +43,12 @@ def write_file (filename, data, ref_file):
 
 
 def test (lng, lat, break_flow, base_flow, break_time):
-    ds = gdal.Open("data/dtm.tif")
-    geotransform = ds.GetGeoTransform()
-    row = int((geotransform[3] - lat)/5)
-    col = int((lng - geotransform[0])/5)
+    ds = openf("dtm.tif")
+    rowcol = get_rowcol(lng, lat, ds=ds)
     band = ds.GetRasterBand(1)
-    dtm = band.ReadAsArray()
-    model = gen_model(dtm, 5)
-    drainpath = model.drainpaths((row, col), break_flow, base_flow, break_time)
-    write_file("drainpath_%s-%s.tif" % (lat, lng), drainpath, "dtm.tif")
+    model = MFD(band.ReadAsArray(), 5)
+    drainpath = model.drainpaths(rowcol, break_flow, base_flow, break_time)
+    writef("drainpath_%s-%s.tif" % rowcol, drainpath, "dtm.tif")
 
 
 if __name__ == "__main__":
