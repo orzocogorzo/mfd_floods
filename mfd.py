@@ -43,7 +43,7 @@ class MFD (Matrix):
         return self.where(self.log_and(not_visiteds, slopes < 0), slopes*-1, 0)
 
     @crono
-    def drainpaths (self, src, maxflow, flow):
+    def drainpaths (self, src, break_flow, base_flow, break_time):
         self.drainages = self.zeros(self.dtm.shape)
 
         def _drainpaths (rcs, queue=list()):
@@ -113,9 +113,9 @@ class MFD (Matrix):
 
         try:
             start, self.visited = self.start_point(src)
-            hyd = hydrogram(maxflow, flow)
+            hyd = hydrogram(break_flow, base_flow, break_time)
             last_flood = None
-            self.drainages[start] = maxflow
+            self.drainages[start] = break_flow
             next_step = {start: True}
             for flood in hyd:
                 print(flood)
