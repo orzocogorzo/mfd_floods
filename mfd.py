@@ -77,7 +77,7 @@ class MFD (Matrix):
                         next_step[rc] = True
                         continue
                         
-                    if self.speeds[rc] < 5.0:
+                    if self.speeds[rc] < self.cellsize:
                         if level > 0:
                             next_step[rc] = True
                             continue
@@ -86,7 +86,7 @@ class MFD (Matrix):
                         src_flood = self.floods[rc]
                         self.drafts[rc] = self.get_draft(rc)
 
-                    not_visiteds = self.array(list(map(lambda d: tuple(d) not in self.visited and tuple(d) != rc, rc + self.deltas))) # [True]*9
+                    not_visiteds = self.array(list(map(lambda d: tuple(d) not in self.visited and tuple(d) != rc, rc + self.deltas)))
                     slopes = self.get_slopes(rc, not_visiteds)
                     downslopes = self.get_downslopes(slopes, not_visiteds)
                     volumetries = self.get_volumetries(slopes, not_visiteds)
