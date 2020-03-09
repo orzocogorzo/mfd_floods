@@ -43,12 +43,20 @@ def writef (filename, data, ref_file):
 
 
 def test (lng, lat, break_flow, base_flow, break_time):
-    ds = openf("dtm.tif")
-    rowcol = get_rowcol(lng, lat, ds=ds)
-    band = ds.GetRasterBand(1)
-    model = MFD(band.ReadAsArray(), 5)
-    drainpath = model.drainpaths(rowcol, break_flow, base_flow, break_time)
-    writef("drainpath_%s-%s.tif" % rowcol, drainpath, "dtm.tif")
+    try:
+        dtm = openf("dtm.tif")
+        manning = openf("mannings.tif")
+        rowcol = get_rowcol(lng, lat, ds=dtm)
+        dtm_band = dtm.GetRasterBand(1)
+        man_band = manning.GetRasterBand(1)
+        model = MFD(dtm_band.ReadAsArray(), man_band.ReadAsArray(), 5)
+        floods, drafts, speeds = model.drainpaths(rowcol, break_flow, base_flow, break_time)
+    except KeyboardInterrupt as e:
+        print("Keyboard Interruption")
+    finally:
+        writef("floods_%s-%s.tif" % rowcol, floods, "dtm.tif")
+        writef("drafts_%s-%s.tif" % rowcol, drafts, "dtm.tif")
+        writef("speeds_%s-%s.tif" % rowcol, speeds, "dtm.tif")
 
 
 if __name__ == "__main__":

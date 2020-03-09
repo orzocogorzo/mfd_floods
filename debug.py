@@ -7,7 +7,7 @@ from time import time
 import numpy as np
 
 # sys.setrecursionlimit(3000)
-# np.seterr(all="raise")
+np.seterr(all="raise")
 np.set_printoptions(precision=2)
 
 
