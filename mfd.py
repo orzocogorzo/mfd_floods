@@ -26,11 +26,14 @@ class MFD (Matrix):
     def start_point (self, rc):
         slopes = self.get_slopes(rc, [True]*9)
         gateway = slopes.argmin()
-        return tuple(rc + self.deltas[gateway]), {rc: True, **{
-            tuple(delta): True
-            for i, delta in enumerate(rc + self.deltas)
-            if i != gateway
-        }}, slopes[gateway]
+        return tuple(rc + self.deltas[gateway]), {
+            rc: True
+        }, slopes[gateway]
+        # {rc: True, **{
+        #     tuple(delta): True
+        #     for i, delta in enumerate(rc + self.deltas)
+        #     if i != gateway
+        # }}, slopes[gateway]
 
     def get_slopes (self, rc, not_visiteds):
         return self.array([self.dtm[tuple(delta)] - self.dtm[rc] for delta in rc + self.deltas])
@@ -47,14 +50,14 @@ class MFD (Matrix):
     def get_downslopes (self, slopes, not_visiteds):
         return self.where(self.log_and(not_visiteds, slopes < 0), slopes*-1, 0)
 
-    def get_draft (self, rc):
-        return self.floods[rc]/math.pow(self.cellsize, 2.0)
+    def get_draft (self, rc, flood=None):
+        return (flood or self.floods[rc])/math.pow(self.cellsize, 2.0)
 
     def get_speeds (self, slopes, draft, manning, incoming_speed, not_visiteds):
         return self.where(not_visiteds, list(map(lambda slope: (self.get_speed(draft, manning, slope) + incoming_speed)/2, slopes)), 0)
 
     def get_speed (self, draft, manning, slope):
-        return max(1e-001, (1.0/manning) * math.pow(self.cellsize + 2*draft, 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
+        return max(1e-2, (1.0/manning) * math.pow((self.cellsize*draft)/(self.cellsize+2*draft), 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
 
     @crono
     def drainpaths (self, src, break_flow, base_flow, break_time):
@@ -71,20 +74,11 @@ class MFD (Matrix):
                         
                     src_flood = self.floods[rc] + self.floods[rc] * self.flood_factor
 
-                    if src_flood < 1e-2:
+                    if src_flood < self.cellsize*0.02:  #  and self.speeds[rc] < self.cellsize**0.2
                         self.floods[rc] = src_flood
-                        self.drafts[rc] = self.get_draft(rc)
+                        self.drafts[rc] = self.get_draft(rc, src_flood)
                         next_step[rc] = True
                         continue
-                        
-                    if self.speeds[rc] < self.cellsize:
-                        if level > 0:
-                            next_step[rc] = True
-                            continue
-                        
-                        self.floods[rc] = src_flood * (self.speeds[rc]/5)
-                        src_flood = self.floods[rc]
-                        self.drafts[rc] = self.get_draft(rc)
 
                     not_visiteds = self.array(list(map(lambda d: tuple(d) not in self.visited and tuple(d) != rc, rc + self.deltas)))
                     slopes = self.get_slopes(rc, not_visiteds)
@@ -97,28 +91,30 @@ class MFD (Matrix):
                     if downslopes.sum() == 0:
                         over_flood = max(0, src_flood - less_volumetry)
                         drived_flood = 0
+                        # traped_flood = src_flood - over_flood
                         if over_flood == 0:
                             self.floods[rc] = src_flood
-                            self.drafts[rc] = self.get_draft(rc)
+                            self.drafts[rc] = self.get_draft(rc, src_flood)
                             self.speeds[rc] = 0
                             next_step[rc] = True
                             continue
                     else:
                         over_flood = max(0, src_flood - less_volumetry)
                         drived_flood = src_flood - over_flood
+                        # traped_flood = 0
 
                     overflows = self.where(src_flood > volumetries, src_flood - volumetries, 0)
                     overstreams = overflows/overflows.sum() * over_flood if overflows.sum() else self.zeros(volumetries.shape)
                     drivedstreams = downslopes/downslopes.sum() * drived_flood if downslopes.sum() else self.zeros(volumetries.shape)
-                    flows = overstreams + drivedstreams
-                    speeds = self.get_speeds(slopes, self.get_draft(rc), self.mannings[rc], incoming_speed, not_visiteds)
+                    floods = overstreams + drivedstreams
+                    speeds = self.get_speeds(slopes, self.get_draft(rc, src_flood), self.mannings[rc], incoming_speed, not_visiteds)
 
-                    for i, (flow, speed) in enumerate(zip(flows, speeds)):
+                    for i, (flood, speed) in enumerate(zip(floods, speeds)):
                         new_rc = tuple(rc + self.deltas[i])
-                        if flow == 0 or speed == 0 or new_rc in self.visited or not self.mannings[new_rc] or not self.dtm[new_rc]: continue
-                        self.floods[new_rc] += flow * (flow / flows.sum() + speed / speeds[flows > 0].sum())/2
-                        self.drafts[new_rc] = self.get_draft(new_rc)
+                        if flood == 0 or speed == 0 or new_rc in self.visited or not self.mannings[new_rc] or not self.dtm[new_rc]: continue
+                        self.drafts[new_rc] = self.get_draft(new_rc, flood)
                         self.speeds[new_rc] = (self.speeds[new_rc] or speed + speed)/2
+                        self.floods[new_rc] += flood * (flood / floods.sum() + speed / speeds[floods > 0].sum())/2 * max(self.cellsize, self.speeds[new_rc])/self.cellsize
                         next_level.append(new_rc)
 
                     self.visited[rc] = True
@@ -140,7 +136,7 @@ class MFD (Matrix):
             self.speeds[start] = self.get_speed(break_flow/self.cellsize**2, self.mannings[start], slope)
             next_step = {start: True}
             for flood in hyd:
-                # print(flood)
+                print(flood)
                 self.flood_factor = (flood / last_flood) if last_flood else 0
                 next_step = _drainpaths(
                     dict(next_step)

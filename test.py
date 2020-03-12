@@ -42,10 +42,10 @@ def writef (filename, data, ref_file):
     print("data saved as %s" % "data/"+filename)
 
 
-def test (lng, lat, break_flow, base_flow, break_time):
+def test (area, lng, lat, break_flow, base_flow, break_time):
     try:
-        dtm = openf("dtm.tif")
-        manning = openf("mannings.tif")
+        dtm = openf(area + "_dtm.tif")
+        manning = openf(area + "_mannings.tif")
         rowcol = get_rowcol(lng, lat, ds=dtm)
         dtm_band = dtm.GetRasterBand(1)
         man_band = manning.GetRasterBand(1)
@@ -54,15 +54,16 @@ def test (lng, lat, break_flow, base_flow, break_time):
     except KeyboardInterrupt as e:
         print("Keyboard Interruption")
     finally:
-        writef("floods_%s-%s.tif" % rowcol, floods, "dtm.tif")
-        writef("drafts_%s-%s.tif" % rowcol, drafts, "dtm.tif")
-        writef("speeds_%s-%s.tif" % rowcol, speeds, "dtm.tif")
+        writef(area + "_floods_%s-%s.tif" % rowcol, floods, area + "_dtm.tif")
+        writef(area + "_drafts_%s-%s.tif" % rowcol, drafts, area + "_dtm.tif")
+        writef(area + "_speeds_%s-%s.tif" % rowcol, speeds, area + "_dtm.tif")
 
 
 if __name__ == "__main__":
-    lng = float(sys.argv[1])
-    lat = float(sys.argv[2])
-    break_flow = int(sys.argv[3])
-    base_flow = int(sys.argv[4])
-    break_time = int(sys.argv[5])
-    test(lng, lat, break_flow, base_flow, break_time)
+    area = str(sys.argv[1])
+    lng = float(sys.argv[2])
+    lat = float(sys.argv[3])
+    break_flow = int(sys.argv[4])
+    base_flow = int(sys.argv[5])
+    break_time = int(sys.argv[6])
+    test(area, lng, lat, break_flow, base_flow, break_time)
