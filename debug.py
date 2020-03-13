@@ -31,4 +31,7 @@ def crono (fn):
         return res
 
     return wrapper
+
+def truncate (val):
+    return int(1e+4*val)/1e+4
     
