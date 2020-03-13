@@ -20,7 +20,7 @@ class MFD (Matrix):
         self.cellsize = cellsize
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
-        # rd.FillDepressions(self.dtm, in_place=True)
+        rd.FillDepressions(self.dtm, in_place=True)
         self.mannings = self.array(manning_array)
 
     def start_point (self, rc):
@@ -84,7 +84,8 @@ class MFD (Matrix):
                     incoming_speed = self.where(not_visiteds != True, [speeds[tuple(delta)] for delta in rc + self.deltas], 0).mean()
 
                     if downslopes.sum() == 0:
-                        over_flood = max(0, src_flood - self.where(not_visiteds, over_volume, float("inf")).min()*8)
+                        # when in a depression allow backward evacuation (do not take care of not_visiteds)
+                        over_flood = max(0, src_flood - over_volume.min() * 8)
                         drived_flood = 0
                         # traped_flood = src_flood - over_flood
                         if over_flood == 0:
@@ -99,7 +100,7 @@ class MFD (Matrix):
                         over_flood = src_flood - drived_flood
                         # traped_flood = 0
 
-                    over_cacthments = self.where(self.log_and(not_visiteds, src_flood > over_volume*8), src_flood - over_volume*8, 0)
+                    over_cacthments = self.where(src_flood > over_volume * 8, src_flood - over_volume * 8, 0)
                     overfloods = over_cacthments**1.1/(over_cacthments**1.1).sum() * over_flood if over_cacthments.sum() else self.zeros(slopes.shape)
                     drivedfloods = downslopes**1.1/(downslopes**1.1).sum() * drived_flood if downslopes.sum() else self.zeros(slopes.shape)
                     rc_floods = overfloods + drivedfloods
