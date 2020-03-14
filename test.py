@@ -45,11 +45,17 @@ def writef (filename, data, ref_file):
 def test (area, lng, lat, break_flow, base_flow, break_time):
     try:
         dtm = openf(area + "_dtm.tif")
+        # slopes = openf(area + "_slopes.tif")
         manning = openf(area + "_mannings.tif")
         rowcol = get_rowcol(lng, lat, ds=dtm)
-        dtm_band = dtm.GetRasterBand(1)
-        man_band = manning.GetRasterBand(1)
-        model = MFD(dtm_band.ReadAsArray(), man_band.ReadAsArray(), 5)
+        dtm_array = dtm.GetRasterBand(1).ReadAsArray()
+        # slopes_stats = slopes.GetRasterBand(1).GetStatistics(True, True)
+        model = MFD(
+            dtm=dtm_array,
+            mannings=manning.GetRasterBand(1).ReadAsArray(),
+            cellsize=5
+            # statistics=slopes_stats
+        )
         floods, drafts, speeds = model.drainpaths(rowcol, break_flow, base_flow, break_time)
     except KeyboardInterrupt as e:
         print("Keyboard Interruption")

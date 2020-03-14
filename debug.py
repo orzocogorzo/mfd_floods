@@ -1,5 +1,5 @@
 # SYS
-import sys
+import sys, os
 import linecache
 from time import time
 
@@ -7,7 +7,7 @@ from time import time
 import numpy as np
 
 # sys.setrecursionlimit(3000)
-np.seterr(all="raise")
+np.seterr(all="warn")
 np.set_printoptions(precision=2)
 
 
@@ -32,6 +32,27 @@ def crono (fn):
 
     return wrapper
 
-def truncate (val):
-    return int(1e+4*val)/1e+4
+def truncate (val, precission=2):
+    return int(10**precission*val)/10**precission
+
+
+def progress_bar (length):
+    length = float(length)
+    start = time()
+
+    sys.stdout.write("\n    0% [")
+    sys.stdout.write(" " * (50))
+    sys.stdout.write("]\r")
+    sys.stdout.flush()
+
+    def _progress_bar (index):
+        index = float(index)
+        progress = int(index / length * 100)
+        sys.stdout.write("  {!s}% [".format(str(progress)))
+        sys.stdout.write("#" * (progress))
+        sys.stdout.write(" " * (100 - progress))
+        sys.stdout.write("] {!s}s  \r".format(str(truncate(time() - start, 0))))
+        sys.stdout.flush()
+
+    return _progress_bar
     

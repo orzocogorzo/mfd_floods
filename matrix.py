@@ -14,6 +14,8 @@ class Matrix (object):
             (+1, -1), (+1, 0), (+1, +1)
         ])
 
+        # self.deltas = np.array([(-1, 0), (0, -1), (0, 0), (0, +1), (+1, 0)])
+
         # self.cardinalities = np.array([
         #     "LT", "T", "RT",
         #     "L", None, "R",
@@ -21,11 +23,11 @@ class Matrix (object):
         # ])
 
         
-        self.perpendiculars = (
-            (3, 1), (0, 2), (1, 5),
-            (0, 6), None, (2, 8),
-            (3, 7), (6, 8), (5, 7)
-        )
+        # self.perpendiculars = (
+        #     (3, 1), (0, 2), (1, 5),
+        #     (0, 6), None, (2, 8),
+        #     (3, 7), (6, 8), (5, 7)
+        # )
 
         
         self.dtm = self.array(dtm_array)
