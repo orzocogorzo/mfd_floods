@@ -123,7 +123,6 @@ class MFD (Matrix):
                         slopes[new_rc] = slopes[new_rc] or rc_slopes[i] + rc_slopes[i] / 2
                         speeds[new_rc] = (speeds[new_rc] or speed + speed) / 2
                         floods[new_rc] += flood
-                        # floods[new_rc] += (flood ** 2 / sum(rc_floods ** 2) + speed ** 2 / sum(rc_speeds ** 2)) / 2 * sum(rc_floods) * min(1, speed / self.cellsize)
                         drafts[new_rc] = self.get_draft(new_rc, floods[new_rc])
                         if new_rc not in visited:
                             if speed / self.cellsize > 1:
