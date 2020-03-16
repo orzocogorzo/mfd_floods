@@ -75,8 +75,9 @@ class MFD (Matrix):
                     src_slope = slopes[rc]
 
                     if src_flood/self.cellsize < 0.5 and src_speed/self.cellsize < 0.5:
-                        # print("NOT ENOUGHT")
-
+                        # ACCUMULATION EDGE: When the flood catched is not enough for compute the continuity
+                        # but it's enought to does not discard them as drained. This define the moving edges
+                        # where the algorithm focus the computation.
                         if level == 0:
                             floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             drafts[rc] = self.get_draft(rc, floods[rc])
@@ -110,6 +111,8 @@ class MFD (Matrix):
                     if rc in next_step: del next_step[rc]
 
                     over_cacthments = self.where(src_flood > over_volume * 8, src_flood - over_volume * 8, 0)
+                    # CATCHMENT DISTRIBUTION. Powers of catchment and slopes defined as the level of concentration/dispersion
+                    # of the floods drived by the slopes.
                     overfloods = over_cacthments ** 2 / sum(over_cacthments ** 2) * over_flood if sum(over_cacthments) else self.zeros((9,))
                     drivedfloods = downslopes ** 2 / sum(downslopes ** 2) * drived_flood if sum(downslopes) else self.zeros((9,))
                     rc_floods = overfloods + drivedfloods
@@ -117,9 +120,12 @@ class MFD (Matrix):
 
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
+                        # DRAINAGE: Define the critical level of flood when the terrain can drain all the water and it's impossible the accumulate flood.
                         if not self.mannings[new_rc] or not self.dtm[new_rc] or flood/self.cellsize < 1e-4 or speed/self.cellsize < 1e-4: continue
                         slopes[new_rc] = slopes[new_rc] or rc_slopes[i] + rc_slopes[i] / 2
                         speeds[new_rc] = (speeds[new_rc] or speed + speed) / 2
+                        # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of concentration/dispersion
+                        # drived by the speed.
                         floods[new_rc] += (flood ** 2 / sum(rc_floods ** 2) + speed ** 2 / sum(rc_speeds ** 2)) / 2 * sum(rc_floods) * min(1, speed / self.cellsize)
                         drafts[new_rc] = self.get_draft(new_rc, floods[new_rc])
                         if new_rc not in visited:
@@ -128,7 +134,7 @@ class MFD (Matrix):
                             else:
                                 next_level.append(new_rc)
                 
-                if len(reacheds) > 0: queue.insert(0, reacheds)  # _drainpaths(reacheds, next_step, queue, level + 1)
+                if len(reacheds) > 0: queue.insert(0, reacheds)
                 if len(next_level) > 0: queue.append(next_level)
                 if len(queue) > 0: _drainpaths(queue.pop(0), next_step, queue, level + 1)
             except Exception:
