@@ -65,6 +65,9 @@ class Matrix (object):
     def where (self, index, a, b):
         return np.where(index, a, b)
 
+    def argwhere (self, index):
+        return np.argwhere(index)
+
     def log_and (self, a, b):
         return np.logical_and(a, b)
 

@@ -42,7 +42,7 @@ def writef (filename, data, ref_file):
     print("data saved as %s" % "data/"+filename)
 
 
-def test (area, lng, lat, break_flow, base_flow, break_time):
+def test (area, lng, lat, break_flow, base_flow, break_time, radius):
     try:
         dtm = openf(area + "_dtm.tif")
         manning = openf(area + "_mannings.tif")
@@ -51,7 +51,8 @@ def test (area, lng, lat, break_flow, base_flow, break_time):
         model = MFD(
             dtm=dtm_array,
             mannings=manning.GetRasterBand(1).ReadAsArray(),
-            cellsize=5
+            cellsize=5,
+            radius=radius
         )
         floods, drafts, speeds = model.drainpaths(rowcol, break_flow, base_flow, break_time)
     except KeyboardInterrupt as e:
@@ -69,4 +70,5 @@ if __name__ == "__main__":
     break_flow = int(sys.argv[4])
     base_flow = int(sys.argv[5])
     break_time = int(sys.argv[6])
-    test(area, lng, lat, break_flow, base_flow, break_time)
+    radius = int(sys.argv[7])
+    test(area, lng, lat, break_flow, base_flow, break_time, radius)

@@ -46,7 +46,7 @@ def progress_bar (length):
     sys.stdout.flush()
 
     def _progress_bar (index):
-        index = float(index)
+        # index = float(index)
         progress = int(index / length * 100)
         sys.stdout.write("  {!s}% [".format(str(progress)))
         sys.stdout.write("#" * (progress))
@@ -55,4 +55,17 @@ def progress_bar (length):
         sys.stdout.flush()
 
     return _progress_bar
+
+
+def progress_counter (name):
+
+    sys.stdout.write("\n[ITER]: 0 [SECONDS]: 0s  \r")
+    start = time()
+
+    def _progress_iter (iter, val):
+        delta = truncate(time() - start, 0)
+        sys.stdout.write(f"[ITER]: {iter} [SECONDS]: {delta}s [{name}]: {val}  \r")
+        sys.stdout.flush()
+
+    return _progress_iter
     

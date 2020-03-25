@@ -6,19 +6,21 @@ from collections import defaultdict
 
 # VENDOR
 import richdem as rd
+# from matplotlib import pyplot
 
 # MODULES
 from matrix import Matrix
 from hydrogram import hydrogram
-from debug import print_exception, crono, truncate, progress_bar
+from debug import print_exception, crono, truncate, progress_bar, progress_counter
 
 
 class MFD (Matrix):
 
-    def __init__ (self, dtm, mannings, cellsize):
+    def __init__ (self, dtm, mannings, cellsize, radius):
         Matrix.__init__(self, dtm)
             
         self.cellsize = cellsize
+        self.radius = radius
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
         rd.FillDepressions(self.dtm, in_place=True)
@@ -59,26 +61,26 @@ class MFD (Matrix):
         drafts = self.zeros(self.dtm.shape)
         speeds = self.zeros(self.dtm.shape)
         slopes = self.zeros(self.dtm.shape)
+        drainages = self.zeros(self.dtm.shape)
         flood_factor = 0
         visited = dict()
+        self.is_over = False
 
         def _drainpaths (rcs, next_step=dict(), queue=list(), level=0):
             try:
+                if self.is_over: return
                 next_level = list()
                 reacheds = list()
                 for rc in rcs:
-                    if rc in visited or not self.mannings[rc] or not self.dtm[rc]: continue                    
+                    if rc in visited: continue
                     
                     src_flood = floods[rc]
                     src_speed = speeds[rc]
                     # src_draft = drafts[rc]
                     src_slope = slopes[rc]
 
-                    # if src_flood/self.cellsize < 0.5 and src_speed/self.cellsize < 1:
                     if src_speed / self.cellsize < 1 and src_flood / self.cellsize < 0.5:
-                        # ACCUMULATION EDGE: When the flood catched is not enough for compute the continuity
-                        # but it's enought to does not discard them as drained. This define the moving edges
-                        # where the algorithm focus the computation.
+    
                         if level == 0:
                             floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             drafts[rc] = self.get_draft(rc, floods[rc])
@@ -124,7 +126,9 @@ class MFD (Matrix):
                     rc_acum_speed2 = sum(rc_speeds ** 2)
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
-                        if not self.mannings[new_rc] or not self.dtm[new_rc]: continue
+                        if not self.mannings[new_rc] or not self.dtm[new_rc]:
+                            self.is_over = True
+                            return
                         slopes[new_rc] = slopes[new_rc] or rc_slopes[i] + rc_slopes[i] / 2
                         speeds[new_rc] = (speeds[new_rc] or speed + speed) / 2
 
@@ -135,14 +139,17 @@ class MFD (Matrix):
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
                         # water and it's impossible the accumulate flood.
-                        if floods[new_rc] / self.cellsize < 1e-4: continue
+                        drainages[new_rc] += 1
+                        # if floods[new_rc] / self.cellsize < 1e-4: continue
+                        if (floods[new_rc] / self.cellsize < 1e-4 and drainages[new_rc] > 10) or floods[new_rc] / self.cellsize < 1e-5:
+                            continue
 
                         if speed / self.cellsize > 1:
                             reacheds.append(new_rc)
                         else:
                             next_level.append(new_rc)
                 
-                if len(reacheds) > 0: queue.insert(0, reacheds)  # _drainpaths(reacheds, next_step, queue, level + 1)
+                if len(reacheds) > 0: queue.insert(0, reacheds)
                 if len(next_level) > 0: queue.append(next_level)
                 if len(queue) > 0: _drainpaths(queue.pop(0), next_step, queue, level + 1)
             except Exception:
@@ -159,17 +166,26 @@ class MFD (Matrix):
             speeds[start] = self.get_speed(break_flow / self.cellsize ** 2, self.mannings[start], slope)
             next_step = {start: True}
             i = 0
-            progress = progress_bar(break_time)
+            # steps, news, outs, lens = list(), list(), list(), list()
+            # progress = progress_bar(break_time)
+            progress = progress_counter("FLOOD")
             for flood in hyd:
-                progress(i)
+                # print(flood)
+                progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
+                # last_step = next_step
                 next_step = _drainpaths(
                     next_step,
                     dict()
                 )
-                print("LEN: ", len(next_step))
+                # outs.append(flood)
+                # steps.append(len(next_step))
+                # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
+                # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
+                distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
                 last_flood = flood
                 i += 1
+                if self.is_over or distance >= self.radius: break
                 
         except KeyboardInterrupt:
             print("KeyboardInterruption!")
@@ -177,4 +193,9 @@ class MFD (Matrix):
             print("Exception!")
             print_exception()
         finally:
+            # pyplot.plot(list(range(0, len(steps), 10)), [math.log(d) if d else d for d in [sum(outs[i:i+10]) for i in range(0, len(steps), 10)]], "b-")
+            # pyplot.plot(list(range(0, len(steps), 10)), [math.log(d) if d else d for d in [sum(steps[i:i+10]) for i in range(0, len(steps), 10)]], "r-")
+            # pyplot.plot(list(range(0, len(steps), 10)), [math.log(d) if d else d for d in [sum(news[i:i+10]) for i in range(0, len(steps), 10)]], "g--")
+            # pyplot.plot(list(range(0, len(steps), 10)), [math.log(d) if d else d for d in [sum(lens[i:i+10]) for i in range(0, len(lens), 10)]], "y--")
+            # pyplot.show()
             return floods, drafts, speeds

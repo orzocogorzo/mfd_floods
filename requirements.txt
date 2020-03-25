@@ -1,0 +1,3 @@
+numpy
+richdem
+gdal==3.0.4 ## gdal-config command to get GDAL version
