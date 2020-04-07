@@ -6,7 +6,7 @@ def read (fname):
 
 setup(
     name="mfdfloods",
-    version="0.1.4",
+    version="0.1.5",
     scripts=["mfd/index.py"],
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
