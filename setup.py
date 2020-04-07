@@ -5,9 +5,9 @@ def read (fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name="mfdfloods",
-    version="0.1.5",
-    scripts=["mfd/index.py"],
+    name="MFD Floods",
+    version="0.1.6",
+    # scripts=["mfd/index.py"],
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
     description="A python script to modelate hidrologic behavior of downstream drainpaths",
@@ -19,7 +19,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         "numpy==1.18.2",
-        "richdem==0.3.4"
+        "richdem==0.3.4",
+        "GDAL==3.0.4"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

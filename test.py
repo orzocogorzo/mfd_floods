@@ -6,7 +6,7 @@ import numpy as np
 from osgeo import gdal
 
 # MODULES
-from mfd import MFD, gtif
+from mfdfloods import MFD, gtif
 
 
 def test (area, lng, lat, break_flow=120, base_flow=50, break_time=100, cellsize=5, radius=2000):

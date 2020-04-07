@@ -11,8 +11,6 @@ The script requires GDAL installed on your system and python-gdal as a python de
 
 To install GDAL execute `apt install gdal-bin libgdal-dev`.
 
-To install python-gdal execute `pip install "GDAL==$(osgeo-config --version)"`.
-
 ## Test
 Execute test.py from inside the folder to test the algorithm.
 

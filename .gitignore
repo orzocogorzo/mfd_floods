@@ -9,9 +9,8 @@ __pycache__
 
 # PyPI
 dist/*
-
-# GDAL
-GDAL-3.0.4.tar.gz
+build/*
+*.egg-info
 
 # data
 data/*
