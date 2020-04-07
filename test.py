@@ -42,20 +42,20 @@ def writef (filename, data, ref_file):
     print("data saved as %s" % "data/"+filename)
 
 
-def test (area, lng, lat, break_flow, base_flow, break_time, radius):
+def test (area, lng, lat, break_flow, base_flow, break_time, cellsize=5, radius=2000):
     try:
         dtm = openf(area + "_dtm.tif")
         manning = openf(area + "_mannings.tif")
         rowcol = get_rowcol(lng, lat, ds=dtm)
-        dtm_array = dtm.GetRasterBand(1).ReadAsArray()
         model = MFD(
-            dtm=dtm_array,
+            dtm=dtm.GetRasterBand(1).ReadAsArray(),
             mannings=manning.GetRasterBand(1).ReadAsArray(),
-            cellsize=5,
+            cellsize=cellsize,
             radius=radius
         )
         floods, drafts, speeds = model.drainpaths(rowcol, break_flow, base_flow, break_time)
     except KeyboardInterrupt as e:
+        print(e)
         print("Keyboard Interruption")
     finally:
         writef(area + "_floods_%s-%s.tif" % rowcol, floods, area + "_dtm.tif")
@@ -70,5 +70,6 @@ if __name__ == "__main__":
     break_flow = int(sys.argv[4])
     base_flow = int(sys.argv[5])
     break_time = int(sys.argv[6])
-    radius = int(sys.argv[7])
-    test(area, lng, lat, break_flow, base_flow, break_time, radius)
+    # cellsize = int(sys.argv[7])
+    # radius = int(sys.argv[8])
+    test(area, lng, lat, break_flow, base_flow, break_time, cellsize=cellsize, radius=radius)
