@@ -30,6 +30,7 @@ class MFD (Matrix):
         self.radius = radius
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
+        rd.FillDepressions(self.dtm, in_place=True)
         self.mannings = self.array(manning_array)
 
         self.mute = mute
