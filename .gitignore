@@ -7,6 +7,9 @@ include/*
 __pycache__
 *.pyc
 
+# PyPI
+dist/*
+
 # GDAL
 GDAL-3.0.4.tar.gz
 

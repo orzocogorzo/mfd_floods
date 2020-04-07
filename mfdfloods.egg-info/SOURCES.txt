@@ -1,6 +1,0 @@
-setup.py
-mfd/__init__.py
-mfdfloods.egg-info/PKG-INFO
-mfdfloods.egg-info/SOURCES.txt
-mfdfloods.egg-info/dependency_links.txt
-mfdfloods.egg-info/top_level.txt
