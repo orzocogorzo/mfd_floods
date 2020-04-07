@@ -33,4 +33,4 @@ The output will be placed in your `data/` floder as three files with the name *d
 
 ## Use
 
-Include mfdfloods as a module on your scripts with `from mfd import MFD` then instantiate the class MFD to execute its drainpaths method.
+Include mfdfloods as a module on your scripts with `from mfdfloods import MFD` then instantiate the class MFD to execute its drainpaths method.

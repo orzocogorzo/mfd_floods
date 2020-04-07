@@ -11,7 +11,7 @@ import richdem as rd
 # MODULES
 from .matrix import Matrix
 from .hydrogram import hydrogram
-import mfd.gtif as gtif
+import mfdfloods.gtif as gtif
 from .debug import print_exception, crono, truncate, progress_bar, progress_counter
 
 
