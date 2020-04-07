@@ -70,6 +70,3 @@ class Matrix (object):
 
     def log_and (self, a, b):
         return np.logical_and(a, b)
-
-
-

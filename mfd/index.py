@@ -22,7 +22,7 @@ class MFD (Matrix):
         self.manning_ds = gtif.openf(manning_path)
 
         dtm_array = gtif.as_array(self.dtm_ds)
-        maning_array = gtif.as_array(self.manning_ds)
+        manning_array = gtif.as_array(self.manning_ds)
 
         Matrix.__init__(self, dtm_array)
 
@@ -30,7 +30,7 @@ class MFD (Matrix):
         self.radius = radius
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
-        self.mannings = self.array(maning_array)
+        self.mannings = self.array(manning_array)
 
         self.mute = mute
 
