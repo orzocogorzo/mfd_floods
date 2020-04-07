@@ -9,9 +9,9 @@ import richdem as rd
 # from matplotlib import pyplot
 
 # MODULES
-from matrix import Matrix
-from hydrogram import hydrogram
-from debug import print_exception, crono, truncate, progress_bar, progress_counter
+from .matrix import Matrix
+from .hydrogram import hydrogram
+from .debug import print_exception, crono, truncate, progress_bar, progress_counter
 
 
 class MFD (Matrix):

@@ -3,12 +3,16 @@ import setuptools
 setuptools.setup(
     name="mfdfloods",
     version="0.1",
-    scripts=["mfd"],
+    scripts=["mfd/__init__.py"],
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
     description="A python script to modelate hidrologic behavior of downstream drainpaths",
     url="https://github.com/orzocogorzo/mfdfloods",
-    packages=setuptools.find_packages(),
+    requires=[
+        "numpy",
+        "richdem",
+        "GDAL"
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI approved :: MIT License",

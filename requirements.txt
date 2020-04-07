@@ -1,3 +1,4 @@
-numpy
-richdem
-gdal==3.0.4 ## gdal-config command to get GDAL version
+numpy==1.18.2
+richdem==0.3.4
+GDAL==3.0.4
+## The following requirements were added by pip freeze:
