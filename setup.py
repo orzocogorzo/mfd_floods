@@ -1,24 +1,25 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def read (fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name="mfdfloods",
-    version="0.1",
-    scripts=["mfd/__init__.py"],
+    version="0.1.4",
+    scripts=["mfd/index.py"],
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
     description="A python script to modelate hidrologic behavior of downstream drainpaths",
     long_description=read("README.md"),
+    long_description_content_type="text/markdown",
     license="MIT",
-    keywords="mfd drainpaths hidrology downstreams multiple flow direction",
+    keywords="mfdfloods mfd flood drainpaths hidrology downstreams multiple flow direction",
     url="https://github.com/orzocogorzo/mfdfloods",
-    requires=[
-        "numpy",
-        "richdem",
-        "GDAL"
+    packages=find_packages(),
+    install_requires=[
+        "numpy==1.18.2",
+        "richdem==0.3.4"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

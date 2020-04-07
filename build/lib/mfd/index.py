@@ -11,28 +11,20 @@ import richdem as rd
 # MODULES
 from .matrix import Matrix
 from .hydrogram import hydrogram
-import mfd.gtif as gtif
 from .debug import print_exception, crono, truncate, progress_bar, progress_counter
 
 
 class MFD (Matrix):
 
-    def __init__ (self, dtm_path, manning_path, cellsize=5, radius=2000, mute=True):
-        self.dtm_ds = gtif.openf(dtm_path)
-        self.manning_ds = gtif.openf(manning_path)
-
-        dtm_array = gtif.as_array(self.dtm_ds)
-        maning_array = gtif.as_array(self.manning_ds)
-
-        Matrix.__init__(self, dtm_array)
-
+    def __init__ (self, dtm, mannings, cellsize, radius):
+        Matrix.__init__(self, dtm)
+            
         self.cellsize = cellsize
         self.radius = radius
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
-        self.mannings = self.array(maning_array)
-
-        self.mute = mute
+        rd.FillDepressions(self.dtm, in_place=True)
+        self.mannings = self.array(mannings)
 
     def start_point (self, rc, drafts):
         slopes = self.get_slopes(rc, drafts)
@@ -63,7 +55,7 @@ class MFD (Matrix):
         return max(1e-3, (1.0/manning) * math.pow(self.cellsize+2*draft, 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
         # return max(1e-3, (1.0/manning) * math.pow((self.cellsize*draft)/(self.cellsize+2*draft), 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
 
-    # @crono
+    @crono
     def drainpaths (self, src, break_flow, base_flow, break_time):
         floods = self.zeros(self.dtm.shape)
         drafts = self.zeros(self.dtm.shape)
@@ -166,7 +158,6 @@ class MFD (Matrix):
                 return next_step
 
         try:
-            src = gtif.get_rowcol(*src, ds=self.dtm_ds)
             start, visited, slope = self.start_point(src, drafts)
             hyd = hydrogram(break_flow, base_flow, break_time)
             last_flood = None
@@ -176,12 +167,10 @@ class MFD (Matrix):
             next_step = {start: True}
             i = 0
             # steps, news, outs, lens = list(), list(), list(), list()
-            if self.mute is False:
-                progress = progress_counter("FLOOD")
-            else:
-                progress = lambda i, f: f
-
+            # progress = progress_bar(break_time)
+            progress = progress_counter("FLOOD")
             for flood in hyd:
+                # print(flood)
                 progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
                 # last_step = next_step
