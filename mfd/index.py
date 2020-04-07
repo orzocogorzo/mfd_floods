@@ -21,17 +21,14 @@ class MFD (Matrix):
         self.dtm_ds = gtif.openf(dtm_path)
         self.manning_ds = gtif.openf(manning_path)
 
-        dtm_array = gtif.as_array(self.dtm_ds)
-        manning_array = gtif.as_array(self.manning_ds)
-
-        Matrix.__init__(self, dtm_array)
+        Matrix.__init__(self, gtif.as_array(self.dtm_ds))
 
         self.cellsize = cellsize
         self.radius = radius
 
         self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
         rd.FillDepressions(self.dtm, in_place=True)
-        self.mannings = self.array(manning_array)
+        self.mannings = self.array(gtif.as_array(self.manning_ds))
 
         self.mute = mute
 
