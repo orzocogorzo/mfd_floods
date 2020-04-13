@@ -85,8 +85,10 @@ class MFD (Matrix):
                     # src_draft = drafts[rc]
                     src_slope = slopes[rc]
 
-                    if src_speed / self.cellsize < 1 and src_flood / self.cellsize < 0.5:
-
+                    # if src_speed < self.cellsize and src_flood / self.cellsize < 0.5:
+                    # if src_flood / math.pow(self.cellsize, 2) < 0.5 and src_speed < self.cellsize:
+                    # if src_flood < math.sqrt(self.cellsize) and src_speed*0.75 < self.cellsize:
+                    if src_flood < self.cellsize and src_speed / self.cellsize < .5:
                         if level == 0:
                             floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             drafts[rc] = self.get_draft(rc, floods[rc])
