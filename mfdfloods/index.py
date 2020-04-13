@@ -1,8 +1,8 @@
 
 # BULTINS
-import sys
+# import sys
 import math
-from collections import defaultdict
+# from collections import defaultdict
 
 # VENDOR
 import richdem as rd
@@ -12,7 +12,7 @@ import richdem as rd
 from .matrix import Matrix
 from .hydrogram import hydrogram
 import mfdfloods.gtif as gtif
-from .debug import print_exception, crono, truncate, progress_bar, progress_counter
+from .debug import print_exception, progress_counter  # , crono, truncate, progress_bar
 
 
 class MFD (Matrix):
@@ -44,7 +44,7 @@ class MFD (Matrix):
 
     def get_volumetries (self, slopes, not_visiteds):
         return self.where(not_visiteds, math.pow(self.cellsize, 2.0) * 0.5 * slopes * (1/3), 0)
-        
+
     def get_downslopes (self, slopes, not_visiteds):
         return self.where(self.log_and(not_visiteds, slopes < 0), slopes*-1, 0)
 
@@ -79,19 +79,20 @@ class MFD (Matrix):
                 reacheds = list()
                 for rc in rcs:
                     if rc in visited: continue
-                    
+
                     src_flood = floods[rc]
                     src_speed = speeds[rc]
                     # src_draft = drafts[rc]
                     src_slope = slopes[rc]
 
                     if src_speed / self.cellsize < 1 and src_flood / self.cellsize < 0.5:
-    
+
                         if level == 0:
                             floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             drafts[rc] = self.get_draft(rc, floods[rc])
                             speeds[rc] = self.get_speed(drafts[rc], self.mannings[rc], src_slope)
-                        
+
+                        drainages[rc] += 1
                         next_step[rc] = True
                         continue
 
@@ -110,6 +111,8 @@ class MFD (Matrix):
                                 floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                                 drafts[rc] = self.get_draft(rc, floods[rc])
                                 speeds[rc] = 0
+
+                            drainages[rc] += 1
                             next_step[rc] = True
                             continue
                     else:
@@ -140,7 +143,7 @@ class MFD (Matrix):
 
                         # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of 
                         # concentration/dispersion drived by the speed.
-                        floods[new_rc] += (flood ** 1 / rc_acum_flood2 + speed ** 2 / rc_acum_speed2) / 2 * rc_acum_flood 
+                        floods[new_rc] += (flood ** 1 / rc_acum_flood2 + speed ** 2 / rc_acum_speed2) / 2 * rc_acum_flood
                         drafts[new_rc] = self.get_draft(new_rc, floods[new_rc])
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
@@ -148,13 +151,15 @@ class MFD (Matrix):
                         drainages[new_rc] += 1
                         # if floods[new_rc] / self.cellsize < 1e-4: continue
                         if (floods[new_rc] / self.cellsize < 1e-4 and drainages[new_rc] > 10) or floods[new_rc] / self.cellsize < 1e-5:
+                            if new_rc in next_level: del next_level[next_level.index(new_rc)]
+                            if new_rc in next_step: del next_step[new_rc]
                             continue
 
                         if speed / self.cellsize > 1:
                             reacheds.append(new_rc)
                         else:
                             next_level.append(new_rc)
-                
+
                 if len(reacheds) > 0: queue.insert(0, reacheds)
                 if len(next_level) > 0: queue.append(next_level)
                 if len(queue) > 0: _drainpaths(queue.pop(0), next_step, queue, level + 1)
@@ -168,6 +173,7 @@ class MFD (Matrix):
             start, visited, slope = self.start_point(src, drafts)
             hyd = hydrogram(break_flow, base_flow, break_time)
             last_flood = None
+            trapped = 0
             floods[start] = break_flow
             drafts[start] = self.get_draft(start, break_flow)
             speeds[start] = self.get_speed(break_flow / self.cellsize ** 2, self.mannings[start], slope)
@@ -182,7 +188,7 @@ class MFD (Matrix):
             for flood in hyd:
                 progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
-                # last_step = next_step
+                last_step = next_step
                 next_step = _drainpaths(
                     next_step,
                     dict()
@@ -191,11 +197,15 @@ class MFD (Matrix):
                 # steps.append(len(next_step))
                 # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
                 # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
+                if len(list(filter(lambda k: k not in last_step, next_step))):
+                    trapped = 0
+                else:
+                    trapped += 1
                 distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
                 last_flood = flood
                 i += 1
-                if self.is_over or distance >= self.radius: break
-                
+                if self.is_over or distance >= self.radius or i > 1e+5 or len(next_step) == 0 or trapped >= 1000: break
+
         except KeyboardInterrupt:
             print("KeyboardInterruption!")
         except Exception:

@@ -6,7 +6,7 @@ def read (fname):
 
 setup(
     name="MFD Floods",
-    version="0.1.8",
+    version="0.1.9",
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
     description="A python script to modelate hidrologic behavior of downstream drainpaths",

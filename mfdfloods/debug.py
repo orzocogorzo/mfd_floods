@@ -63,7 +63,7 @@ def progress_counter (name):
     start = time()
 
     def _progress_iter (iter, val):
-        delta = truncate(time() - start, 0)
+        delta = int(time() - start)  # truncate(time() - start, 0)
         sys.stdout.write(f"[ITER]: {iter} [SECONDS]: {delta}s [{name}]: {truncate(val, 4)}       \r")
         sys.stdout.flush()
 
