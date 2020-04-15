@@ -13,28 +13,38 @@ from .matrix import Matrix
 from .hydrogram import hydrogram
 import mfdfloods.gtif as gtif
 from .debug import print_exception, progress_counter  # , crono, truncate, progress_bar
+from .geotransform import GeoTransformFit
 
 
 class MFD (Matrix):
 
-    def __init__ (self, dtm_path, manning_path, cellsize=5, radius=2000, mute=True):
+    def __init__ (self, dtm_path, manning_path, cellsize=5, radius=2000, nodata=-99, mute=True):
         self.dtm_ds = gtif.openf(dtm_path)
-        self.manning_ds = gtif.openf(manning_path)
+        self.dtm_gt = self.dtm_ds.GetGeoTransform()
+        self.mannings_ds = gtif.openf(manning_path)
+        self.mannings_gt = self.mannings_ds.GetGeoTransform()
 
         Matrix.__init__(self, gtif.as_array(self.dtm_ds))
 
         self.cellsize = cellsize
         self.radius = radius
+        self.nodata = nodata
 
-        self.dtm = rd.rdarray(self.dtm, no_data=float("nan"))
+        self.dtm = rd.rdarray(self.dtm, no_data=nodata)
         rd.FillDepressions(self.dtm, in_place=True)
-        self.mannings = self.array(gtif.as_array(self.manning_ds))
+
+        self.mannings = self.array(gtif.as_array(self.mannings_ds))
+        self.mannings = GeoTransformFit(
+            self.mannings,
+            self.mannings_gt,
+            self.dtm_gt
+        )
 
         self.mute = mute
 
     def __del__ (self):
         del self.dtm_ds
-        del self.manning_ds
+        del self.mannings_ds
 
     def start_point (self, rc, drafts):
         slopes = self.get_slopes(rc, drafts)
@@ -43,9 +53,9 @@ class MFD (Matrix):
             rc: True,
             **{
                 tuple(delta): True
-                for i, delta in enumerate(self.deltas[gateway] * -1 + self.deltas)
-                # for delta in (rc + self.deltas[gateway] * -1) + self.deltas
-                if i != gateway
+                # for i, delta in enumerate(self.deltas[gateway] * -1 + self.deltas)
+                # if i != gateway
+                for delta in (rc + self.deltas[gateway] * -1) + self.deltas
             }
         }, slopes[gateway]
 
@@ -145,9 +155,10 @@ class MFD (Matrix):
                     rc_acum_speed2 = sum(rc_speeds ** 2)
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
-                        if not self.mannings[new_rc] or not self.dtm[new_rc]:
+                        if not self.mannings[new_rc] or not self.dtm[new_rc] or self.mannings[new_rc] == self.nodata or self.dtm[new_rc] == self.nodata:
                             self.is_over = True
                             return
+
                         slopes[new_rc] = slopes[new_rc] or rc_slopes[i] + rc_slopes[i] / 2
                         speeds[new_rc] = (speeds[new_rc] or speed + speed) / 2
 
@@ -159,7 +170,6 @@ class MFD (Matrix):
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
                         # water and it's impossible the accumulate flood.
                         drainages[new_rc] += 1
-                        # if floods[new_rc] / self.cellsize < 1e-4: continue
                         if (floods[new_rc] / self.cellsize < 1e-4 and drainages[new_rc] > 10) or floods[new_rc] / self.cellsize < 1e-5:
                             if new_rc in next_level: del next_level[next_level.index(new_rc)]
                             if new_rc in next_step: del next_step[new_rc]
