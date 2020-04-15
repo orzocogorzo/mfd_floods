@@ -32,11 +32,21 @@ class MFD (Matrix):
 
         self.mute = mute
 
+    def __del__ (self):
+        del self.dtm_ds
+        del self.manning_ds
+
     def start_point (self, rc, drafts):
         slopes = self.get_slopes(rc, drafts)
         gateway = slopes.argmin()
         return tuple(rc + self.deltas[gateway]), {
-            rc: True
+            rc: True,
+            **{
+                tuple(delta): True
+                for i, delta in enumerate(self.deltas[gateway] * -1 + self.deltas)
+                # for delta in (rc + self.deltas[gateway] * -1) + self.deltas
+                if i != gateway
+            }
         }, slopes[gateway]
 
     def get_slopes (self, rc, drafts):
@@ -85,9 +95,6 @@ class MFD (Matrix):
                     # src_draft = drafts[rc]
                     src_slope = slopes[rc]
 
-                    # if src_speed < self.cellsize and src_flood / self.cellsize < 0.5:
-                    # if src_flood / math.pow(self.cellsize, 2) < 0.5 and src_speed < self.cellsize:
-                    # if src_flood < math.sqrt(self.cellsize) and src_speed*0.75 < self.cellsize:
                     if src_flood < self.cellsize and src_speed / self.cellsize < .5:
                         if level == 0:
                             floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
@@ -99,7 +106,8 @@ class MFD (Matrix):
                         continue
 
                     rc_slopes = self.get_slopes(rc, drafts)
-                    not_visiteds = [True] * 9  # self.array(list(map(lambda d: tuple(d) not in visited and tuple(d) != rc, rc + self.deltas)))
+                    not_visiteds = [True] * 9
+                    # not_visiteds = self.array(list(map(lambda d: tuple(d) not in visited and tuple(d) != rc, rc + self.deltas)))
                     downslopes = self.get_downslopes(rc_slopes, not_visiteds)
                     upslopes = self.get_upslopes(rc_slopes, not_visiteds)
                     under_volume = self.get_volumetries(downslopes, not_visiteds)

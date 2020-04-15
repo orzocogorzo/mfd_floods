@@ -1,10 +1,6 @@
 # BUILT INS
 import sys
 
-# VENDOR
-import numpy as np
-from osgeo import gdal
-
 # MODULES
 from mfdfloods import MFD, gtif
 
