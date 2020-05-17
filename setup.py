@@ -6,7 +6,7 @@ def read (fname):
 
 setup(
     name="MFD Floods",
-    version="0.1.12",
+    version="0.1.13",
     author="Orzo Cogorzo",
     author_email="orzocogorzo@hotmail.com",
     description="A python script to modelate hidrologic behavior of downstream drainpaths",
@@ -17,9 +17,9 @@ setup(
     url="https://github.com/orzocogorzo/mfdfloods",
     packages=find_packages(),
     install_requires=[
-        "numpy==1.18.2",
-        "richdem==0.3.4",
-        "GDAL==3.0.4"
+        "numpy",
+        "richdem",
+        "GDAL"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
