@@ -1,7 +1,20 @@
-def hydrogram (break_flow, base_flow, break_seconds):
-    # for t in range(break_seconds):
-    #     yield break_flow * break_flow**(-4*t/(break_seconds*0.3)) + base_flow
+from typing import Generator
+
+
+def gen_hydrogram(
+    hydrogram: list[tuple[float, float]]
+) -> Generator[float, None, float]:
     t = 0
+    r = tuple(float(v) for v in hydrogram.pop(0))
     while True:
-        yield break_flow * break_flow ** (-1 * t / (break_seconds * 0.3)) + base_flow
+        if len(hydrogram) == 0:
+            break
+
+        if t >= float(hydrogram[0][0]):
+            r = tuple(float(v) for v in hydrogram.pop(0))
+
+        yield r[1] + (float(hydrogram[0][1]) - r[1]) / (float(hydrogram[0][0]) - t)
         t += 1
+
+    return 0
+

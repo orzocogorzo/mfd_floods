@@ -1,4 +1,4 @@
-numpy==1.18.2
-richdem==0.3.4
-GDAL==3.0.4
+numpy
+richdem
+GDAL==3.4.3
 ## The following requirements were added by pip freeze:

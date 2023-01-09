@@ -10,7 +10,7 @@ import richdem as rd
 
 # MODULES
 from .matrix import Matrix
-from .hydrogram import hydrogram
+from .hydrogram import gen_hydrogram
 import mfdfloods.gtif as gtif
 from .debug import print_exception, progress_counter  # , crono, truncate, progress_bar
 from .geotransform import GeoTransformFit
@@ -18,7 +18,7 @@ from .geotransform import GeoTransformFit
 
 class MFD (Matrix):
 
-    def __init__ (self, dtm_path, manning_path, cellsize=5, radius=2000, nodata=-99, mute=True):
+    def __init__(self, dtm_path: str, manning_path: str, nodata: float = -999, mute: bool = True):
         self.dtm_ds = gtif.openf(dtm_path)
         self.dtm_gt = self.dtm_ds.GetGeoTransform()
         self.mannings_ds = gtif.openf(manning_path)
@@ -26,8 +26,8 @@ class MFD (Matrix):
 
         Matrix.__init__(self, gtif.as_array(self.dtm_ds))
 
-        self.cellsize = cellsize
-        self.radius = radius
+        # self.cellsize = cellsize
+        self.cellsize = self.dtm_gt[1]
         self.nodata = nodata
 
         self.dtm = rd.rdarray(self.dtm, no_data=nodata)
@@ -42,11 +42,11 @@ class MFD (Matrix):
 
         self.mute = mute
 
-    def __del__ (self):
+    def __del__(self):
         del self.dtm_ds
         del self.mannings_ds
 
-    def start_point (self, rc, drafts):
+    def start_point(self, rc, drafts):
         slopes = self.get_slopes(rc, drafts)
         gateway = slopes.argmin()
         return tuple(rc + self.deltas[gateway]), {
@@ -59,30 +59,30 @@ class MFD (Matrix):
             }
         }, slopes[gateway]
 
-    def get_slopes (self, rc, drafts):
+    def get_slopes(self, rc, drafts):
         return self.array([(self.dtm[tuple(delta)] + drafts[tuple(delta)]) - (self.dtm[rc] + drafts[rc]) for delta in rc + self.deltas])
 
-    def get_volumetries (self, slopes, not_visiteds):
+    def get_volumetries(self, slopes, not_visiteds):
         return self.where(not_visiteds, math.pow(self.cellsize, 2.0) * 0.5 * slopes * (1/3), 0)
 
-    def get_downslopes (self, slopes, not_visiteds):
+    def get_downslopes(self, slopes, not_visiteds):
         return self.where(self.log_and(not_visiteds, slopes < 0), slopes*-1, 0)
 
-    def get_upslopes (self, slopes, not_visiteds):
+    def get_upslopes(self, slopes, not_visiteds):
         return self.where(self.log_and(not_visiteds, slopes >= 0), slopes, 0)
 
-    def get_draft (self, rc, flood):
+    def get_draft(self, rc, flood):
         return flood/math.pow(self.cellsize, 2.0)
 
-    def get_speeds (self, slopes, draft, manning, not_visiteds):
+    def get_speeds(self, slopes, draft, manning, not_visiteds):
         return self.where(not_visiteds, list(map(lambda slope: self.get_speed(draft, manning, slope), slopes)), 0)
 
-    def get_speed (self, draft, manning, slope):
-        return max(1e-3, (1.0/manning) * math.pow(self.cellsize+2*draft, 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
+    def get_speed(self, draft, manning, slope):
+        return max(1e-3, (1. / manning) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / 5.0, 0.5))
         # return max(1e-3, (1.0/manning) * math.pow((self.cellsize*draft)/(self.cellsize+2*draft), 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
 
     # @crono
-    def drainpaths (self, src, break_flow, base_flow, break_time):
+    def drainpaths (self, src: tuple[float, float], hydrogram: list[tuple[float, float]]):
         floods = self.zeros(self.dtm.shape)
         drafts = self.zeros(self.dtm.shape)
         speeds = self.zeros(self.dtm.shape)
@@ -191,7 +191,10 @@ class MFD (Matrix):
         try:
             src = gtif.get_rowcol(*src, ds=self.dtm_ds)
             start, visited, slope = self.start_point(src, drafts)
-            hyd = hydrogram(break_flow, base_flow, break_time)
+            hyd = gen_hydrogram(hydrogram)
+            break_flow = 0
+            while break_flow == 0:
+                break_flow = next(hyd)
             last_flood = None
             trapped = 0
             floods[start] = break_flow
@@ -205,7 +208,14 @@ class MFD (Matrix):
             else:
                 progress = lambda i, f: f
 
-            for flood in hyd:
+            import pdb; pdb.set_trace()
+            while True:
+                # for flood in hyd:
+                try:
+                    flood = next(hyd)
+                except StopIteration:
+                    break
+
                 progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
                 last_step = next_step
@@ -221,10 +231,10 @@ class MFD (Matrix):
                     trapped = 0
                 else:
                     trapped += 1
-                distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
+                # distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
                 last_flood = flood
                 i += 1
-                if self.is_over or distance >= self.radius or i > 1e+5 or len(next_step) == 0 or trapped >= 1000: break
+                if self.is_over or i > 1e+5 or len(next_step) == 0 or trapped >= 1000: break
 
         except KeyboardInterrupt:
             print("KeyboardInterruption!")

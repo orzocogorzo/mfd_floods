@@ -1,21 +1,21 @@
 # BUILT INS
+from ctypes import ArgumentError
 import sys
+import os.path
+import csv
 
 # MODULES
 from mfdfloods import MFD, gtif
 
 
-def test (area, lng, lat, break_flow=120, base_flow=50, break_time=100, cellsize=5, radius=2000):
-    print(area, lng, lat, break_flow, base_flow, break_time, cellsize, radius)
+def test (area: str, lng: float, lat: float, hydrogram: list[tuple[float, float]]):
     try:
         model = MFD(
             dtm_path="data/%s_dtm.tif" % area,
             manning_path="data/%s_mannings.tif" % area,
-            cellsize=cellsize,
-            radius=radius,
             mute=False
         )
-        floods, drafts, speeds = model.drainpaths((lng, lat), break_flow, base_flow, break_time)
+        floods, drafts, speeds = model.drainpaths((lng, lat), hydrogram)
     except KeyboardInterrupt as e:
         print(e)
         print("Keyboard Interruption")
@@ -26,13 +26,18 @@ def test (area, lng, lat, break_flow=120, base_flow=50, break_time=100, cellsize
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 5:
+        raise TypeError("Invalid arguments")
+
     kwargs = dict()
     kwargs["area"] = str(sys.argv[1])
     kwargs["lng"] = float(sys.argv[2])
     kwargs["lat"] = float(sys.argv[3])
-    if len(sys.argv) >= 4: kwargs["break_flow"] = int(sys.argv[4])
-    if len(sys.argv) >= 5: kwargs["base_flow"] = int(sys.argv[5])
-    if len(sys.argv) >= 6: kwargs["break_time"] = int(sys.argv[6])
-    if len(sys.argv) >= 7: kwargs["cellsize"] = int(sys.argv[7])
-    if len(sys.argv) >= 8: kwargs["radius"] = int(sys.argv[8])
+    if os.path.isfile(sys.argv[4]):
+        with open(sys.argv[4], "r") as f:
+            reader = csv.reader(f, delimiter=",", quotechar='"')
+            kwargs["hydrogram"] = [row for row in reader]
+    else:
+        raise TypeError("Hydrogram file doesn't exists")
+
     test(**kwargs)

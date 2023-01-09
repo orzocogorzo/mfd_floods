@@ -16,10 +16,10 @@ def get_geotrans (filename=None, ds=None):
     return ds.GetGeoTransform()
 
 
-def get_rowcol (lng, lat, ds=None, filename=None):
+def get_rowcol(lng: float, lat: float, ds=None, filename=None):
     ds = ds or openf(filename)
     geotransform = get_geotrans(filename=filename, ds=ds)
-    return (int((geotransform[3] - lat)/5), int((lng - geotransform[0])/5))
+    return (int((geotransform[3] - lat) / -geotransform[5]), int((lng - geotransform[0]) / geotransform[1]))
 
 
 def writef (filename, data, ref_file):
