@@ -7,7 +7,7 @@ packages = ["mfdfloods"]
 
 [project]
 name = "mfdfloods"
-version = "0.1.18"
+version = "0.1.20"
 description = "Multiple flow direction floods hydrodynamic modelation"
 readme = "README.md"
 authors = [{ name = "Orzo Cogorzo", email = "orzocogorzo@hotmail.com" }]
@@ -31,9 +31,9 @@ keywords = [
     "multiple flow direction"
 ]
 dependencies = [
-    "numpy >= 1.24.1",
-    "richdem >= 0.3.4",
-    "GDAL >= 3.6.2",
+    "numpy",
+    "richdem",
+    "gdal",
 ]
 requires-python = ">=3.8"
 
