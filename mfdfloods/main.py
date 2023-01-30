@@ -16,10 +16,10 @@ from .debug import print_exception, progress_counter  # , crono, truncate, progr
 
 class MFD(Matrix):
 
-    def __init__(self, dtm_path: str, manning_path: str, nodata: float = -999, mute: bool = True):
+    def __init__(self, dtm_path: str, mannings_path: str, nodata: float = -999, mute: bool = True):
         self.dtm_ds = openf(dtm_path)
         self.dtm_gt = self.dtm_ds.GetGeoTransform()
-        self.mannings_ds = openf(manning_path)
+        self.mannings_ds = openf(mannings_path)
         self.mannings_gt = self.mannings_ds.GetGeoTransform()
 
         Matrix.__init__(self, as_array(self.dtm_ds))
@@ -75,7 +75,7 @@ class MFD(Matrix):
         return flood / self.cellarea
 
     def get_speeds(self, slopes, draft, manning) -> NDArray:
-        return self.array(list(map(lambda slope: self.get_speed(draft, manning, slope), slopes)))
+        return self.array([self.get_speed(draft, manning, slope) for slope in slopes])
 
     def get_speed(self, draft, manning, slope) -> float:
         return max(1e-3, (1. / manning) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / 5.0, 0.5))
@@ -171,8 +171,10 @@ class MFD(Matrix):
                         # water and it's impossible the accumulate flood.
                         drainages[new_rc] += 1
                         if (floods[new_rc] / self.cellsize < 1e-4 and drainages[new_rc] > 10) or floods[new_rc] / self.cellsize < 1e-5:
-                            if new_rc in next_level: del next_level[new_rc]
-                            if new_rc in next_step: del next_step[new_rc]
+                            if new_rc in next_level:
+                                del next_level[new_rc]
+                            if new_rc in next_step:
+                                del next_step[new_rc]
                             continue
 
                         if speed / self.cellsize > 1:
@@ -226,14 +228,15 @@ class MFD(Matrix):
                 # steps.append(len(next_step))
                 # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
                 # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
-                if len(list(filter(lambda k: k not in last_step, next_step))):
+                if len([rc for rc in next_step if rc in last_step]) == 0:
                     trapped = 0
                 else:
                     trapped += 1
                 # distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
                 last_flood = flood
                 i += 1
-                if self.is_over or i > 1e+5 or len(next_step) == 0 or trapped >= 1000: break
+                if self.is_over or i > 1e+5 or len(next_step) == 0 or trapped >= 1000:
+                    break
 
         except KeyboardInterrupt:
             print("KeyboardInterruption!")
