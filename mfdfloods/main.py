@@ -82,7 +82,7 @@ class MFD(Matrix):
         # return max(1e-3, (1.0/manning) * math.pow((self.cellsize*draft)/(self.cellsize+2*draft), 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
 
     # @crono
-    def drainpaths (self, src: tuple[float, float], hydrogram_curve: list[tuple[float, float]]):
+    def drainpaths (self, src: tuple, hydrogram_curve: list):
         floods = self.zeros(self.dtm.shape)
         drafts = self.zeros(self.dtm.shape)
         speeds = self.zeros(self.dtm.shape)

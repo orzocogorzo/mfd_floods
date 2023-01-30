@@ -2,7 +2,7 @@ from typing import Generator
 
 
 def gen_hydrogram(
-    hydrogram: list[tuple[float, float]]
+    hydrogram: list
 ) -> Generator[float, None, float]:
     t = 0
     r = tuple(float(v) for v in hydrogram.pop(0))

@@ -11,7 +11,7 @@ from .gtif import writef
 def main(
     dtm_path: str,
     mannings_path: str,
-    hydrogram: list[tuple[float, float]],
+    hydrogram: list,
     lng: float,
     lat: float,
 ) -> None:

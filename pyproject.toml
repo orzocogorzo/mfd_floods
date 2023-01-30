@@ -7,7 +7,7 @@ packages = ["mfdfloods"]
 
 [project]
 name = "mfdfloods"
-version = "0.1.16"
+version = "0.1.18"
 description = "Multiple flow direction floods hydrodynamic modelation"
 readme = "README.md"
 authors = [{ name = "Orzo Cogorzo", email = "orzocogorzo@hotmail.com" }]
@@ -35,7 +35,7 @@ dependencies = [
     "richdem >= 0.3.4",
     "GDAL >= 3.6.2",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 
 [project.urls]
 Homepage = "https://github.com/orzocogorzo/mfdfloods"
