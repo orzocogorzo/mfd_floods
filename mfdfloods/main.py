@@ -228,7 +228,7 @@ class MFD(Matrix):
                 # steps.append(len(next_step))
                 # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
                 # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
-                if len([rc for rc in next_step if rc in last_step]) == 0:
+                if len([rc for rc in next_step if rc not in last_step]) > 0:
                     trapped = 0
                 else:
                     trapped += 1
