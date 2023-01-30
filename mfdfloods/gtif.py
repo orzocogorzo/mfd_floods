@@ -1,7 +1,4 @@
-import numpy as np
 from osgeo import gdal
-from osgeo import gdal_array
-import sys
 
 
 def openf (filename):

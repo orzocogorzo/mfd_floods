@@ -8,6 +8,7 @@ def gen_hydrogram(
     r = tuple(float(v) for v in hydrogram.pop(0))
     while True:
         if len(hydrogram) == 0:
+            yield r[1]
             break
 
         if t >= float(hydrogram[0][0]):

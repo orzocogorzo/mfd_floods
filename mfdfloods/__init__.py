@@ -1,1 +1,3 @@
-from .index import MFD
+from .main import MFD
+
+__version__ = "0.1.16"
