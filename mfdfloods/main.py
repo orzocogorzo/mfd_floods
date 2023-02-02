@@ -11,12 +11,18 @@ from .hydrogram import gen_hydrogram
 from .gtif import openf, as_array, get_rowcol
 from .geotransform import GeoTransformFit
 from .debug import print_exception, progress_counter  # , crono, truncate, progress_bar
-# from .geotransform import GeoTransformFit
 
 
 class MFD(Matrix):
 
-    def __init__(self, dtm_path: str, mannings_path: str, nodata: float = -999, mute: bool = True):
+    def __init__(
+        self,
+        dtm_path: str,
+        mannings_path: str,
+        nodata: float = -99,
+        radius: float = 2000,
+        mute: bool = True
+    ) -> None:
         self.dtm_ds = openf(dtm_path)
         self.dtm_gt = self.dtm_ds.GetGeoTransform()
         self.mannings_ds = openf(mannings_path)
@@ -35,9 +41,10 @@ class MFD(Matrix):
         self.mannings = GeoTransformFit(
             self.mannings,
             self.mannings_gt,
-            self.dtm_gt
+            self.dtm_gt,
         )
 
+        self.radius = radius
         self.mute = mute
 
     def __del__(self):
@@ -79,7 +86,6 @@ class MFD(Matrix):
 
     def get_speed(self, draft, manning, slope) -> float:
         return max(1e-3, (1. / manning) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / 5.0, 0.5))
-        # return max(1e-3, (1.0/manning) * math.pow((self.cellsize*draft)/(self.cellsize+2*draft), 2.0/3.0) * math.pow(max(0, (-1*slope))/5.0, 0.5))
 
     # @crono
     def drainpaths (self, src: tuple, hydrogram_curve: list):
@@ -101,13 +107,11 @@ class MFD(Matrix):
                 for rc, src_flood in rcs.items():
                     if rc in visited: continue
 
-                    # src_flood = floods[rc]
                     src_speed = speeds[rc]
                     src_slope = slopes[rc]
 
                     if src_flood < self.cellsize and src_speed / self.cellsize < .5:
                         if level == 0:
-                            # floods[rc] += src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             floods[rc] = src_flood + src_flood * flood_factor * min(1, src_speed / self.cellsize)
                             drafts[rc] = self.get_draft(floods[rc])
                             speeds[rc] = self.get_speed(drafts[rc], self.mannings[rc], src_slope)
@@ -210,6 +214,7 @@ class MFD(Matrix):
             else:
                 progress = lambda i, f: f
 
+            distance = 0
             while True:
                 try:
                     flood = next(hyd)
@@ -228,14 +233,27 @@ class MFD(Matrix):
                 # steps.append(len(next_step))
                 # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
                 # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
-                if len([rc for rc in next_step if rc not in last_step]) > 0:
-                    trapped = 0
-                else:
+                edge = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
+                if distance == int(edge):
                     trapped += 1
-                # distance = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
+                else:
+                    trapped = 0
+
+                distance = int(edge)
+
                 last_flood = flood
                 i += 1
-                if self.is_over or i > 1e+5 or len(next_step) == 0 or trapped >= 1000:
+                if self.is_over:
+                    print("\nExit condition: Flood is over dtm boundaries")
+                    break
+                elif i > 1e+4:
+                    print("\nExit condition: Max recursion limit")
+                    break
+                elif trapped >= 5e+3:
+                    print("\nExit condition: Flood's stability reached")
+                    break
+                elif distance >= self.radius:
+                    print("\nExit condition: Distance limit reached")
                     break
 
         except KeyboardInterrupt:
