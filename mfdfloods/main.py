@@ -68,7 +68,7 @@ class MFD(Matrix):
 
     def get_volumetries(self, slopes) -> NDArray:
         # Volumetrie of the pyramide from the center to the edge (half of the cell)
-        return self.cellarea * 0.5 * slopes * (1 / 3)
+        return self.cellarea * 0.25 * slopes * (1 / 3)
 
     def get_downslopes(self, slopes) -> NDArray:
         # Negativa alt deltas
@@ -85,7 +85,7 @@ class MFD(Matrix):
         return self.array([self.get_speed(draft, manning, slope) for slope in slopes])
 
     def get_speed(self, draft, manning, slope) -> float:
-        return max(1e-3, (1. / manning) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / 5.0, 0.5))
+        return max(1e-3, (1. / manning * .9) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / self.cellsize, 0.5))
 
     # @crono
     def drainpaths (self, src: tuple, hydrogram_curve: list):
@@ -149,14 +149,14 @@ class MFD(Matrix):
                     over_cacthments = self.where(src_flood > over_volume * 8, src_flood - over_volume * 8, 0)
                     # CATCHMENT DISTRIBUTION. Powers of catchment and slopes defined as the level of concentration/dispersion
                     # of the floods drived by the slopes.
-                    overfloods = over_cacthments ** 1 / sum(over_cacthments ** 1) * over_flood if sum(over_cacthments) else self.zeros((9,))
-                    drivedfloods = downslopes ** 1 / sum(downslopes ** 1) * drived_flood if sum(downslopes) else self.zeros((9,))
+                    overfloods = over_cacthments ** 2 / sum(over_cacthments ** 2) * over_flood if sum(over_cacthments) else self.zeros((9,))
+                    drivedfloods = downslopes ** 2 / sum(downslopes ** 2) * drived_flood if sum(downslopes) else self.zeros((9,))
                     rc_floods = overfloods + drivedfloods
                     rc_speeds = self.get_speeds(rc_slopes, drafts[rc], self.mannings[rc])
 
                     rc_acum_flood = sum(rc_floods)
-                    rc_acum_flood3 = sum(rc_floods ** 1)
-                    rc_acum_speed3 = sum(rc_speeds ** 3)
+                    rc_acum_flood2 = sum(rc_floods ** 1)
+                    rc_acum_speed2 = sum(rc_speeds ** 1)
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
                         if not self.mannings[new_rc] or not self.dtm[new_rc] or self.mannings[new_rc] == self.nodata or self.dtm[new_rc] == self.nodata:
@@ -168,7 +168,7 @@ class MFD(Matrix):
 
                         # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of 
                         # concentration/dispersion drived by the speed.
-                        floods[new_rc] += (flood ** 1 / rc_acum_flood3 + speed ** 3 / rc_acum_speed3) / 2 * rc_acum_flood
+                        floods[new_rc] += (flood ** 1 / rc_acum_flood2 + speed ** 1 / rc_acum_speed2) / 2 * rc_acum_flood
                         drafts[new_rc] = self.get_draft(floods[new_rc])
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
@@ -219,12 +219,13 @@ class MFD(Matrix):
                 try:
                     flood = next(hyd)
                 except StopIteration:
+                    print("\nExit condition: Hydrogram drained")
                     break
 
                 progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
                 floods = floods * max(1, flood_factor)
-                last_step = next_step
+                # last_step = next_step
                 next_step = _drainpaths(
                     next_step,
                     dict()
