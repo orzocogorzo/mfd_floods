@@ -30,7 +30,7 @@ def main(
 
     floods, drafts, speeds = None, None, None
     try:
-        model = MFD(dtm_path, mannings_path, mute=False)
+        model = MFD(dtm_path, mannings_path, radius=3000, mute=False)
         floods, drafts, speeds = model.drainpaths((lng, lat), hydrogram)
     except KeyboardInterrupt as e:
         print(e)
@@ -44,8 +44,8 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python -m mfdfloods <path:data_dir> <float:lng> <float:lat>")
+    if len(sys.argv) < 4:
+        print("Usage: python -m mfdfloods <path:data_dir> <float:lng> <float:lat> [float:radius]")
         exit()
 
     kwargs = dict()
@@ -72,5 +72,8 @@ if __name__ == "__main__":
         with open(hydrogram_name) as f:
             reader = csv.reader(f, delimiter=",", quotechar='"')
             kwargs["hydrogram"] = [row for row in reader]
+
+    if len(sys.argv) == 5:
+        kwargs["radius"] = float(sys.argv[4])
 
     main(**kwargs)
