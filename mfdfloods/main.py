@@ -21,6 +21,7 @@ class MFD(Matrix):
         mannings_path: str,
         nodata: float = -99,
         radius: float = 2000,
+        catchment_power: float = 1.,
         mute: bool = True
     ) -> None:
         self.dtm_ds = openf(dtm_path)
@@ -45,6 +46,7 @@ class MFD(Matrix):
         )
 
         self.radius = radius
+        self.catchment_power = catchment_power
         self.mute = mute
 
     def __del__(self):
@@ -88,7 +90,7 @@ class MFD(Matrix):
         return max(1e-3, (1. / manning * .9) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / self.cellsize, 0.5))
 
     # @crono
-    def drainpaths (self, src: tuple, hydrogram_curve: list):
+    def drainpaths (self, src: tuple, hydrogram_curve: list) -> tuple[NDArray, NDArray, NDArray]:
         floods = self.zeros(self.dtm.shape)
         drafts = self.zeros(self.dtm.shape)
         speeds = self.zeros(self.dtm.shape)
@@ -155,8 +157,8 @@ class MFD(Matrix):
                     rc_speeds = self.get_speeds(rc_slopes, drafts[rc], self.mannings[rc])
 
                     rc_acum_flood = sum(rc_floods)
-                    rc_acum_flood2 = sum(rc_floods ** 1)
-                    rc_acum_speed2 = sum(rc_speeds ** 1)
+                    powered_flood = sum(rc_floods ** self.catchment_power)
+                    powered_speed = sum(rc_speeds ** self.catchment_power)
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
                         if not self.mannings[new_rc] or not self.dtm[new_rc] or self.mannings[new_rc] == self.nodata or self.dtm[new_rc] == self.nodata:
@@ -168,7 +170,7 @@ class MFD(Matrix):
 
                         # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of 
                         # concentration/dispersion drived by the speed.
-                        floods[new_rc] += (flood ** 1 / rc_acum_flood2 + speed ** 1 / rc_acum_speed2) / 2 * rc_acum_flood
+                        floods[new_rc] += (flood ** self.catchment_power / powered_flood + speed ** self.catchment_power / powered_speed) / 2 * rc_acum_flood
                         drafts[new_rc] = self.get_draft(floods[new_rc])
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
