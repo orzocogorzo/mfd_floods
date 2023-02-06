@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 
 # VENDOR
 import richdem as rd
+from numpy import sqrt, power
 
 # MODULES
 from .matrix import Matrix
@@ -21,7 +22,8 @@ class MFD(Matrix):
         mannings_path: str,
         nodata: float = -99,
         radius: float = 2000,
-        catchment_power: float = 1.,
+        convergence_factor: float = 2.,
+        slope_trawl: float = 2.,
         mute: bool = True
     ) -> None:
         self.dtm_ds = openf(dtm_path)
@@ -46,14 +48,15 @@ class MFD(Matrix):
         )
 
         self.radius = radius
-        self.catchment_power = catchment_power
+        self.convergence_factor = convergence_factor
+        self.slope_trawl = slope_trawl
         self.mute = mute
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.dtm_ds
         del self.mannings_ds
 
-    def start_point(self, rc, drafts):
+    def start_point(self, rc: tuple, drafts: NDArray) -> tuple:
         slopes = self.get_slopes(rc, drafts)
         gateway = slopes.argmin()
         return tuple(rc + self.deltas[gateway]), {
@@ -64,33 +67,34 @@ class MFD(Matrix):
             }
         }, slopes[gateway]
 
-    def get_slopes(self, rc, drafts) -> NDArray:
+    def get_slopes(self, rc: tuple, drafts: NDArray) -> NDArray:
         # Get periferic alt deltas
-        return self.array([(self.dtm[tuple(delta)] + drafts[tuple(delta)]) - (self.dtm[rc] + drafts[rc]) for delta in rc + self.deltas])
+        return self.array([(float(self.dtm[tuple(delta)]) + float(drafts[tuple(delta)])) - (self.dtm[rc] + drafts[rc]) for delta in rc + self.deltas])
 
-    def get_volumetries(self, slopes) -> NDArray:
+    def get_volumetries(self, slopes: NDArray) -> NDArray:
         # Volumetrie of the pyramide from the center to the edge (half of the cell)
         return self.cellarea * 0.25 * slopes * (1 / 3)
 
-    def get_downslopes(self, slopes) -> NDArray:
+    def get_downslopes(self, slopes: NDArray) -> NDArray:
         # Negativa alt deltas
         return self.where(slopes < 0, slopes * -1, 0)
 
-    def get_upslopes(self, slopes) -> NDArray:
+    def get_upslopes(self, slopes: NDArray) -> NDArray:
         # Positive alt deltas
         return self.where(slopes >= 0, slopes, 0)
 
-    def get_draft(self, flood) -> float:
+    def get_draft(self, flood: float) -> float:
+        # return (flood + self.get_volumetries(slopes).sum()) / self.cellarea
         return flood / self.cellarea
 
     def get_speeds(self, slopes, draft, manning) -> NDArray:
         return self.array([self.get_speed(draft, manning, slope) for slope in slopes])
 
     def get_speed(self, draft, manning, slope) -> float:
-        return max(1e-3, (1. / manning * .9) * math.pow(self.cellsize + 2 * draft, 2. / 3.) * math.pow(max(0, (-1 * slope)) / self.cellsize, 0.5))
+        return max(1e-3, (1. / manning) * math.pow(self.cellsize + 2. * draft, 2. / 3.) * math.pow(max(.0, (-1. * slope)) / self.cellsize, .5))
 
     # @crono
-    def drainpaths (self, src: tuple, hydrogram_curve: list) -> tuple[NDArray, NDArray, NDArray]:
+    def drainpaths(self, src: tuple, hydrogram_curve: list) -> tuple[NDArray, NDArray, NDArray]:
         floods = self.zeros(self.dtm.shape)
         drafts = self.zeros(self.dtm.shape)
         speeds = self.zeros(self.dtm.shape)
@@ -115,7 +119,7 @@ class MFD(Matrix):
                     if src_flood < self.cellsize and src_speed / self.cellsize < .5:
                         if level == 0:
                             floods[rc] = src_flood + src_flood * flood_factor * min(1, src_speed / self.cellsize)
-                            drafts[rc] = self.get_draft(floods[rc])
+                            drafts[rc] = self.get_draft(float(floods[rc]))
                             speeds[rc] = self.get_speed(drafts[rc], self.mannings[rc], src_slope)
 
                         drainages[rc] += 1
@@ -134,7 +138,7 @@ class MFD(Matrix):
                         if over_flood == 0:
                             if level == 0:
                                 floods[rc] = src_flood + src_flood * flood_factor * min(1, src_speed / self.cellsize)
-                                drafts[rc] = self.get_draft(floods[rc])
+                                drafts[rc] = self.get_draft(float(floods[rc]))
                                 speeds[rc] = 0
 
                             drainages[rc] += 1
@@ -142,23 +146,24 @@ class MFD(Matrix):
                             continue
                     else:
                         src_flood = floods[rc]
-                        drived_flood = min(src_flood, sum(under_volume))
+                        drived_flood = min(src_flood, under_volume.sum())
                         over_flood = src_flood - drived_flood
 
                     visited[rc] = True
-                    if rc in next_step: del next_step[rc]
+                    if rc in next_step:
+                        del next_step[rc]
 
                     over_cacthments = self.where(src_flood > over_volume * 8, src_flood - over_volume * 8, 0)
                     # CATCHMENT DISTRIBUTION. Powers of catchment and slopes defined as the level of concentration/dispersion
                     # of the floods drived by the slopes.
-                    overfloods = over_cacthments ** 2 / sum(over_cacthments ** 2) * over_flood if sum(over_cacthments) else self.zeros((9,))
-                    drivedfloods = downslopes ** 2 / sum(downslopes ** 2) * drived_flood if sum(downslopes) else self.zeros((9,))
+                    overfloods = over_cacthments ** 1 / (over_cacthments ** 1).sum() * over_flood if over_cacthments.sum() else self.zeros((9,))
+                    drivedfloods = downslopes ** 1 / (downslopes ** 1).sum() * drived_flood if downslopes.sum() else self.zeros((9,))
                     rc_floods = overfloods + drivedfloods
                     rc_speeds = self.get_speeds(rc_slopes, drafts[rc], self.mannings[rc])
 
-                    rc_acum_flood = sum(rc_floods)
-                    powered_flood = sum(rc_floods ** self.catchment_power)
-                    powered_speed = sum(rc_speeds ** self.catchment_power)
+                    rc_acum_flood = rc_floods.sum()
+                    powered_flood = (rc_floods ** self.convergence_factor).sum()
+                    powered_speed = (rc_speeds ** self.slope_trawl).sum()
                     for i, (flood, speed) in enumerate(zip(rc_floods, rc_speeds)):
                         new_rc = tuple(rc + self.deltas[i])
                         if not self.mannings[new_rc] or not self.dtm[new_rc] or self.mannings[new_rc] == self.nodata or self.dtm[new_rc] == self.nodata:
@@ -170,8 +175,8 @@ class MFD(Matrix):
 
                         # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of 
                         # concentration/dispersion drived by the speed.
-                        floods[new_rc] += (flood ** self.catchment_power / powered_flood + speed ** self.catchment_power / powered_speed) / 2 * rc_acum_flood
-                        drafts[new_rc] = self.get_draft(floods[new_rc])
+                        floods[new_rc] += (flood ** self.convergence_factor / powered_flood + speed ** self.slope_trawl / powered_speed) / 2 * rc_acum_flood
+                        drafts[new_rc] = self.get_draft(float(floods[new_rc]))
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
                         # water and it's impossible the accumulate flood.
@@ -188,9 +193,12 @@ class MFD(Matrix):
                         else:
                             next_level[new_rc] = floods[new_rc]
 
-                if len(reacheds) > 0: queue.insert(0, reacheds)
-                if len(next_level) > 0: queue.append(next_level)
-                if len(queue) > 0: _drainpaths(queue.pop(0), next_step, queue, level + 1)
+                if len(reacheds) > 0:
+                    queue.insert(0, reacheds)
+                if len(next_level) > 0:
+                    queue.append(next_level)
+                if len(queue) > 0:
+                    _drainpaths(queue.pop(0), next_step, queue, level + 1)
             except Exception:
                 print_exception()
             finally:
@@ -228,15 +236,12 @@ class MFD(Matrix):
                 flood_factor = (flood / last_flood) if last_flood else 0
                 floods = floods * max(1, flood_factor)
                 # last_step = next_step
-                next_step = _drainpaths(
-                    next_step,
-                    dict()
-                )
+                next_step = _drainpaths(next_step, dict())
                 # outs.append(flood)
                 # steps.append(len(next_step))
                 # news.append(len(list(filter(lambda k: k not in last_step, next_step))))
                 # lens.append(self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max())
-                edge = self.array([math.sqrt(sum(coord**2)) for coord in abs(self.argwhere(floods > 0) - start) * self.cellsize]).max()
+                edge = sqrt(power(abs(self.argwhere(floods > 0) - start) * self.cellsize, 2).sum(1)).max()
                 if distance == int(edge):
                     trapped += 1
                 else:
