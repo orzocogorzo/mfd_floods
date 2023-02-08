@@ -127,7 +127,7 @@ class MFD(Matrix):
                         continue
 
                     rc_slopes = self.get_slopes(rc, drafts)
-                    downslopes = self.get_downslopes(rc_slopes )
+                    downslopes = self.get_downslopes(rc_slopes)
                     upslopes = self.get_upslopes(rc_slopes)
                     under_volume = self.get_volumetries(downslopes)
                     over_volume = self.get_volumetries(upslopes)
@@ -170,13 +170,14 @@ class MFD(Matrix):
                             self.is_over = True
                             return
 
-                        slopes[new_rc] = slopes[new_rc] or rc_slopes[i] + rc_slopes[i] / 2
-                        speeds[new_rc] = (speeds[new_rc] or speed + speed) / 2
+                        slopes[new_rc] = min(slopes[new_rc], rc_slopes[i])
+                        speeds[new_rc] = max(speeds[new_rc], speed)
 
                         # CATCHMENT ASSIGNATION. Based on a ponderation of flood by the speed and powered as the level of 
                         # concentration/dispersion drived by the speed.
                         floods[new_rc] += (flood ** self.convergence_factor / powered_flood + speed ** self.slope_trawl / powered_speed) / 2 * rc_acum_flood
                         drafts[new_rc] = self.get_draft(float(floods[new_rc]))
+                        # speeds[new_rc] = self.get_speed(drafts[new_rc], self.mannings[new_rc], rc_slopes[i])
 
                         # DRAINAGE: Define the critical level of flood when the terrain can drain all the
                         # water and it's impossible the accumulate flood.
@@ -234,7 +235,7 @@ class MFD(Matrix):
 
                 progress(i, flood)
                 flood_factor = (flood / last_flood) if last_flood else 0
-                floods = floods * max(1, flood_factor)
+                # floods = floods * max(1, flood_factor)
                 # last_step = next_step
                 next_step = _drainpaths(next_step, dict())
                 # outs.append(flood)
