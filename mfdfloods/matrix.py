@@ -3,6 +3,7 @@
 
 # MODULES
 import numpy as np
+np.seterr(all="warn")
 
 
 class Matrix (object):
@@ -10,7 +11,7 @@ class Matrix (object):
     def __init__ (self, dtm_array):
         self.deltas = np.array([
             (-1, -1), (-1, 0), (-1, +1),
-            (0, -1), (0, 0), (0, +1),
+            (0, -1), (0, +1),
             (+1, -1), (+1, 0), (+1, +1)
         ])
         
