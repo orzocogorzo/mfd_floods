@@ -7,7 +7,7 @@ packages = ["mfdfloods"]
 
 [project]
 name = "mfdfloods"
-version = "0.1.30"
+version = "0.1.31"
 description = "Multiple flow direction floods hydrodynamic modelation"
 readme = "README.md"
 authors = [{ name = "Orzo Cogorzo", email = "orzocogorzo@hotmail.com" }]
