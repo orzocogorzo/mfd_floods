@@ -222,8 +222,8 @@ class MFD(Matrix):
                                 continue
 
                             if speed / level / self.cellsize < 1.:
-                                del_key(new_rc, reacheds)
-                                if drainages[new_rc] <= self.max_drain:
+                                # del_key(new_rc, reacheds)
+                                if drainages[new_rc] <= self.max_drain and not new_rc in reacheds:
                                     next_step[new_rc] = True
                                 continue
 
@@ -317,10 +317,10 @@ class MFD(Matrix):
                 if self.is_over:
                     print("\nExit condition: Flood is over dtm boundaries")
                     break
-                elif i > 1e+4:
+                elif i > 5e+3:
                     print("\nExit condition: Max recursion limit")
                     break
-                elif trapped >= 5e+3:
+                elif trapped >= 1e+2:
                     print("\nExit condition: Flood's stability reached")
                     break
                 elif distance >= self.radius:
