@@ -60,8 +60,11 @@ class MFD(Matrix):
         self.mute = mute
 
     def __del__(self) -> None:
-        del self.dtm_ds
-        del self.mannings_ds
+        try:
+            del self.dtm_ds
+            del self.mannings_ds
+        except AttributeError:
+            pass
 
     def start_point(self, rc: tuple, drafts: NDArray) -> tuple:
         slopes = self.get_slopes(rc, drafts)
@@ -320,7 +323,7 @@ class MFD(Matrix):
                 elif i > 5e+3:
                     print("\nExit condition: Max recursion limit")
                     break
-                elif trapped >= 1e+2:
+                elif trapped >= 2e+2:
                     print("\nExit condition: Flood's stability reached")
                     break
                 elif distance >= self.radius:
