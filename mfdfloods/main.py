@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 # MODULES
 from .matrix import Matrix
-from .hydrogram import gen_hydrogram
+from .hydrogram import gen_hydrogram, hydrogram_statistics
 from .gtif import openf, as_array, get_rowcol
 from .geotransform import GeoTransformFit
 from .debug import print_exception, progress_counter
@@ -206,6 +206,7 @@ class MFD(Matrix):
                     src_acum_flood = src_floods.sum()
                     powered_flood = (src_floods ** self.convergence_factor).sum()
                     powered_speed = (src_speeds ** self.slope_trawl).sum()
+                    cell_reacheds = 0
                     for i, (flood, speed) in enumerate(zip(src_floods, src_speeds)):
                         new_rc = tuple(src_deltas[i])
                         try:
@@ -225,13 +226,17 @@ class MFD(Matrix):
                                 continue
 
                             if speed / level / self.cellsize < 1.:
-                                # del_key(new_rc, reacheds)
                                 if drainages[new_rc] <= self.max_drain and not new_rc in reacheds:
                                     next_step[new_rc] = True
                                 continue
 
-                            visited[rc] = True
                             reacheds[new_rc] = True
+                            cell_reacheds += 1
+
+                    if cell_reacheds == 0:
+                        next_step[rc] = True
+                    else:
+                        visited[rc] = True
 
                 if len(reacheds) > 0:
                     queue.append((reacheds, level + 1))
@@ -264,6 +269,7 @@ class MFD(Matrix):
             start, slope = self.start_point(source, drafts)
 
             hyd = gen_hydrogram(hydrogram_curve)
+            hyd_statistics = hydrogram_statistics(hydrogram_curve)
             break_flood = 0
             while break_flood == 0:
                 break_flood = next(hyd)
@@ -285,6 +291,7 @@ class MFD(Matrix):
             flood = break_flood
             distance = .0
             trapped = 0
+            peak = 0
             next_step = {start: True}
 
             while True:
@@ -293,6 +300,7 @@ class MFD(Matrix):
 
                 try:
                     flood = next(hyd)
+                    peak = max(flood, peak)
                     flood_factor = flood / last_flood
                 except (ZeroDivisionError, StopIteration):
                     print("\nExit condition: Hydrogram drained")
@@ -310,7 +318,7 @@ class MFD(Matrix):
                     drainages[rc] += 1
 
                 edge = np.sqrt(np.power(abs(self.argwhere(floods > 0) - start) * self.cellsize, 2.).sum(1)).max()
-                if distance == int(edge):
+                if distance == int(edge) and peak == hyd_statistics["peak"]:
                     trapped += 1
                 else:
                     trapped = 0
