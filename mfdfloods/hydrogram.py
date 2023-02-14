@@ -28,7 +28,7 @@ def hydrogram_statistics(hydrogram):
     for t, f in hydrogram:
         t = int(t) - delay
         f = float(f)
-        if f == 0:
+        if f == 0 or t == 0:
             delay += t
             continue
         mean = (mean * time + f * t) / (time + t)
