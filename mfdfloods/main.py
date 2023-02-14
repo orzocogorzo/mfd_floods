@@ -28,8 +28,8 @@ class MFD(Matrix):
         mannings_path: str,
         nodata: float = -99,
         radius: float = 2000,
-        convergence_factor: float = 2.,
-        slope_trawl: float = 2.,
+        convergence_factor: float = 1.5,
+        speed_trawl: float = 1.5,
         mute: bool = True
     ) -> None:
         self.dtm_ds = openf(dtm_path)
@@ -55,8 +55,8 @@ class MFD(Matrix):
 
         self.radius = radius
         self.convergence_factor = convergence_factor
-        self.slope_trawl = slope_trawl
-        self.max_drain = 1e+1
+        self.speed_trawl = speed_trawl
+        self.max_drain = 2e+1
         self.mute = mute
 
     def __del__(self) -> None:
@@ -153,6 +153,10 @@ class MFD(Matrix):
                     if rc in self.overcomes:
                         continue
 
+                    if type(rcs[rc]) is int and rcs[rc] > 1:
+                        next_step[rc] = rcs[rc] - 1
+                        continue
+
                     src_deltas = self.get_deltas(rc)
                     src_flood = max(.0, float(floods[rc]) + catchments.get(rc, .0))
                     src_draft = self.get_draft(src_flood)
@@ -160,7 +164,7 @@ class MFD(Matrix):
                     src_slope = self.get_slope(src_slopes)
                     src_speed = self.get_speed(src_draft, self.mannings[rc], src_slope)
 
-                    if src_speed / level / self.cellsize < 1.:
+                    if src_speed / level / self.cellsize < 1:
                         if drainages[rc] <= self.max_drain:
                             next_step[rc] = True
                         else:
@@ -204,8 +208,8 @@ class MFD(Matrix):
                         continue
                     
                     src_acum_flood = src_floods.sum()
-                    powered_flood = (src_floods ** self.convergence_factor).sum()
-                    powered_speed = (src_speeds ** self.slope_trawl).sum()
+                    powered_flood = (np.power(src_floods, self.convergence_factor)).sum()
+                    powered_speed = (np.power(src_speeds, self.speed_trawl)).sum()
                     cell_reacheds = 0
                     for i, (flood, speed) in enumerate(zip(src_floods, src_speeds)):
                         new_rc = tuple(src_deltas[i])
@@ -218,16 +222,18 @@ class MFD(Matrix):
 
                         if flood > 0 and speed > 0:
                             speed = max(speeds[new_rc], speed)
-                            flood = ((flood ** self.convergence_factor / powered_flood + speed ** self.slope_trawl / powered_speed) / 2 * src_acum_flood) / level # * (speed / level / self.cellsize)
+                            flood = ((np.power(flood, self.convergence_factor) / powered_flood + np.power(speed, self.speed_trawl) / powered_speed) / 2 * src_acum_flood) / level
+                            flood = flood * min(1, speed / level / self.cellsize)
                             catchments[new_rc] = catchments.get(new_rc, .0) + flood
                             catchments[rc] = catchments.get(rc, .0) - flood
 
                             if new_rc in visited:
                                 continue
 
-                            if speed / level / self.cellsize < 1.:
+
+                            if (iters := speed / level / self.cellsize) < 1.:
                                 if drainages[new_rc] <= self.max_drain and not new_rc in reacheds:
-                                    next_step[new_rc] = True
+                                    next_step[new_rc] = round(1 / iters)
                                 continue
 
                             reacheds[new_rc] = True
@@ -293,9 +299,11 @@ class MFD(Matrix):
             trapped = 0
             peak = 0
             next_step = {start: True}
+            catchments = {}
 
             while True:
                 progress(i, flood)
+                prev_catchments = catchments
                 next_step, catchments = _drainpaths(next_step, {}, {}, 1, [], {})
 
                 try:
@@ -306,8 +314,16 @@ class MFD(Matrix):
                     print("\nExit condition: Hydrogram drained")
                     break
 
-                for rc in catchments:
-                    catchment = max(.0, catchments[rc]) * flood_factor
+                # for rc in catchments:
+                for rc in next_step:
+                    catchments[rc] = catchments.get(rc)
+                    if catchments[rc] is None:
+                        if rc in self.overcomes:
+                            del_key(rc, next_step)
+                            continue
+
+                        catchments[rc] = prev_catchments.get(rc, 0)
+                    catchment = catchments[rc] * flood_factor
                     if catchment <= 0:
                         continue
 
@@ -316,6 +332,8 @@ class MFD(Matrix):
                     slope = self.get_slope(self.get_slopes(rc, drafts))
                     speeds[rc] = self.get_speed(float(drafts[rc]), self.mannings[rc], slope)
                     drainages[rc] += 1
+
+                prev_catchments = catchments
 
                 edge = np.sqrt(np.power(abs(self.argwhere(floods > 0) - start) * self.cellsize, 2.).sum(1)).max()
                 if distance == int(edge) and peak == hyd_statistics["peak"]:
