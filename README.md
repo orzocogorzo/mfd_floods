@@ -11,26 +11,42 @@ The script requires GDAL installed on your system and python-gdal as a python de
 
 To install GDAL execute `apt install gdal-bin libgdal-dev`.
 
-## Test
-Execute test.py from inside the folder to test the algorithm.
+## Usage as command line
 
-The test.py is a script that call the class MFD and execute its modelization with the datasource from the `data/` folder. There you have to place your GeoJSON files with the modelized line geometry.
+MFD Floods requires a two raster layer, in a [GDAL raster format](https://gdal.org/user/raster_data_model.html), like [GTiff](https://gdal.org/drivers/raster/gtiff.html). The first required layer is the DTM covering the area of study. The second, is a raster layer containing manning values of the terrain. Place this two layers on a directory like this:
 
-`python test.py <area::string> <X::float> <Y::float> <break_flow::int> <base_flow::int> <break_time::int> [cellsize::int]{5} [radius::int]{2000}`
+```
+my_area/
+├── dtm.tif
+├── hydrogram.csv
+├── mannings.tif
+└── pks.csv
+```
+The other two required files are the **hidrogram.csv** and the **pks.csv**.
 
-Arguments:
+The first file should contain data about the exit hidrogram as two set of values structured as two columns
 
-1. **Area** is the file on the `data/` folder with your DTM in GeoTiff format.
-2. **X** is the longitude in your reference dtm distance units.
-3. **Y** is the latitude in your reference dtm distance units.
-4. **break_flow** is the start income flow.
-5. **base_flow** is the base income flow after the initial pic.
-6. **break_time** is the time that has to pass in seconds to go from the break_flow to the base_flow.
-7. **cellsize** is the size of your DTM cellsize.
-8. **radius** is the maximum extension of the output flood in your dtm distance units.
+| Seconds   | Cubic meters  |
+|-----------|---------------|
+| 10        | 3.45          |
+| 20        | 6.21          |
+| 30        | 7.34          |
 
-The output will be placed in your `data/` floder as three files with the name *drainpaths_{x}-{y}_(draft|flood|speed).tif*.
+The second file should contain pair of coordinates as start points for the modile identified by an ID like this
 
-## Use
+| id | lng       | lat        |
+|----|-----------|------------|
+| 1  | 335713.6  | 4706584.6  |
+| 2  | 335731.2  | 4706545.4  |
+| 3  | 336621.9  | 4704577.0  |
+
+Once you have your are of study ready, then run `python -m mfdfloods ./my_area <start_point_id>` to perform a the hidrological modeling. The script will output three new files:
+
+1. drafts.tif
+2. speeds.tif
+3. floods.tif
+
+
+## Usage as python dependency
 
 Include mfdfloods as a module on your scripts with `from mfdfloods import MFD` then instantiate the class MFD to execute its drainpaths method.
