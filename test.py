@@ -1,38 +1,70 @@
-# BUILT INS
+import os.path
 import sys
+from osgeo import gdal
+from mfdfloods.geotransform import GeoTransformFit
+from random import randint
+from numpy.typing import NDArray
+from numpy import zeros
+from typing import Generator
 
-# MODULES
-from mfdfloods import MFD, gtif
+
+def adrift(array: NDArray, steps: int = 100) -> Generator:
+    y, x = array.shape
+
+    for i in range(steps):
+        yield randint(0, y), randint(0, x)
 
 
-def test (area, lng, lat, break_flow=120, base_flow=50, break_time=100, cellsize=5, radius=2000):
-    print(area, lng, lat, break_flow, base_flow, break_time, cellsize, radius)
+def main(dtm_filename: str, man_filename: str, vp_filename: str) -> None:
+    dtm = gdal.Open(dtm_filename)
+    man = gdal.Open(man_filename)
+    vp = gdal.Open(vp_filename)
+
+    dtm_gt = dtm.GetGeoTransform()
+    man_gt = man.GetGeoTransform()
+    vp_gt = vp.GetGeoTransform()
+    print(dtm_gt, man_gt, vp_gt)
+    # import pdb; pdb.set_trace()
+
+    dtm_arr = dtm.GetRasterBand(1).ReadAsArray()
+    man_arr = man.GetRasterBand(1).ReadAsArray()
+    vp_arr = vp.GetRasterBand(1).ReadAsArray()
+    fit = GeoTransformFit(vp_arr, vp_gt, man_gt)
+    man_res = zeros(dtm_arr.shape)
+    fit_res = zeros(vp_arr.shape)
+
+    path = adrift(man_arr)
+
+    v, n = 0, 0
     try:
-        model = MFD(
-            dtm_path="data/%s_dtm.tif" % area,
-            manning_path="data/%s_mannings.tif" % area,
-            cellsize=cellsize,
-            radius=radius,
-            mute=False
-        )
-        floods, drafts, speeds = model.drainpaths((lng, lat), break_flow, base_flow, break_time)
-    except KeyboardInterrupt as e:
-        print(e)
-        print("Keyboard Interruption")
-    finally:
-        gtif.writef("data/%s_floods_%s-%s.tif" % (area, lng, lat), floods, "data/%s_dtm.tif" % (area))
-        gtif.writef("data/%s_drafts_%s-%s.tif" % (area, lng, lat), drafts, "data/%s_dtm.tif" % (area))
-        gtif.writef("data/%s_speeds_%s-%s.tif" % (area, lng, lat), speeds, "data/%s_dtm.tif" % (area))
+        while step := next(path):
+            if fit[step] is None:
+                continue
 
+            if fit[step] == man_arr[step] or fit[step] < 0 and man_arr[step] < 0:
+                v += 1
+                print('[X]', fit[step], man_arr[step])
+            else:
+                print('[ ]', fit[step], man_arr[step])
+
+            n += 1
+
+            print("x: ", (dtm_gt[0] + step[1] * dtm_gt[1]) - (vp_gt[0] + fit.proxy(step)[1] * vp_gt[1]), "y: ", (dtm_gt[3] + step[0] * dtm_gt[3]) - (vp_gt[3] + fit.proxy(step)[0] * vp_gt[3]))
+    except StopIteration:
+        pass
+
+    print(f"{v}/{n} = {v / n * 100}%")
 
 if __name__ == "__main__":
-    kwargs = dict()
-    kwargs["area"] = str(sys.argv[1])
-    kwargs["lng"] = float(sys.argv[2])
-    kwargs["lat"] = float(sys.argv[3])
-    if len(sys.argv) >= 4: kwargs["break_flow"] = int(sys.argv[4])
-    if len(sys.argv) >= 5: kwargs["base_flow"] = int(sys.argv[5])
-    if len(sys.argv) >= 6: kwargs["break_time"] = int(sys.argv[6])
-    if len(sys.argv) >= 7: kwargs["cellsize"] = int(sys.argv[7])
-    if len(sys.argv) >= 8: kwargs["radius"] = int(sys.argv[8])
-    test(**kwargs)
+    if len(sys.argv) < 4:
+        print("USAGE: python test.py dmt_filename mannings_filename")
+        exit()
+
+    if not os.path.isfile(sys.argv[1]):
+        raise FileNotFoundError(sys.argv[1])
+    if not os.path.isfile(sys.argv[2]):
+        raise FileNotFoundError(sys.argv[2])
+    if not os.path.isfile(sys.argv[3]):
+        raise FileNotFoundError(sys.argv[3])
+
+    main(*sys.argv[1:])

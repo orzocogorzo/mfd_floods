@@ -1,0 +1,44 @@
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["mfdfloods"]
+
+[project]
+name = "mfdfloods"
+version = "0.1.34"
+description = "Multiple flow direction floods hydrodynamic modelation"
+readme = "README.md"
+authors = [{ name = "Orzo Cogorzo", email = "orzocogorzo@hotmail.com" }]
+license = { file = "MIT" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Hydrology"
+]
+keywords = [
+    "mfdfloods",
+    "mfd",
+    "flood",
+    "drainpaths",
+    "hidrology",
+    "downstreams",
+    "multiple flow direction"
+]
+dependencies = [
+    "numpy",
+    "richdem",
+    "gdal",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/orzocogorzo/mfdfloods"
+
+[project.scripts]
+mfdfloods = "mfdfloods.__main__:main"

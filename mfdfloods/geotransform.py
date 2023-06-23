@@ -1,13 +1,39 @@
-class GeoTransformFit (object):
+from typing import Optional
+from numpy.typing import NDArray
 
-    def __init__ (self, array, geotransform, ref_geotransform):
+class GeoTransformFit:
+    def __init__(self, array: NDArray, gt: tuple, gt_ref: tuple, nodata=None):
         self._array = array
-        self.x_delta = (geotransform[0] - ref_geotransform[0])/geotransform[1]
-        self.y_delta = (geotransform[3] - ref_geotransform[3])/(geotransform[5] * -1)
-        self.bookmark = 0
 
-    def __getitem__(self, key):
-        return self._array[(int(round(key[0] + self.x_delta)), int(round(key[1] + self.y_delta)))]
+        # Cellsizes
+        self.sx = gt[1]
+        self.sy = gt[5]
 
-    def __setitem__(self, key, value):
-        self.array[(int(round(key[0] + self.x_delta)), int(round(key[1] + self.y_delta)))] = value
+        # Relation between cellsizes
+        self.rx = gt_ref[1] / gt[1]
+        self.ry = gt_ref[5] / gt[5]
+
+        # Origin coordinate deltas
+        self.dx = gt_ref[0] - gt[0]
+        self.dy = gt_ref[3] - gt[3]
+        self._nodata = nodata
+
+    def proxy(self, rc: tuple) -> tuple:
+        # A * R + D / S = B
+        return (round(rc[0] * self.ry + self.dy / self.sy), round(rc[1] * self.rx + self.dx / self.sx))
+
+    def __getitem__(self, rc: tuple) -> Optional[float]:
+        try:
+            return self._array[self.proxy(rc)]
+        except ValueError:
+            return self._nodata
+        except IndexError:
+            return self._nodata
+
+    def __setitem__(self, rc: tuple, value: float) -> None:
+        try:
+            self._array[self.proxy(rc)] = value
+        except ValueError:
+            pass
+        except IndexError:
+            pass
