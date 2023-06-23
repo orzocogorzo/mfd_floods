@@ -49,23 +49,11 @@ def main(dtm_filename: str, man_filename: str, vp_filename: str) -> None:
 
             n += 1
 
-            # print(step, fit.proxy(step))
             print("x: ", (dtm_gt[0] + step[1] * dtm_gt[1]) - (vp_gt[0] + fit.proxy(step)[1] * vp_gt[1]), "y: ", (dtm_gt[3] + step[0] * dtm_gt[3]) - (vp_gt[3] + fit.proxy(step)[0] * vp_gt[3]))
-            # print(step, fit.proxy(step))
-            # print(step[0] - fit.proxy(step)[0], step[1] - fit.proxy(step)[1])
-            # man_res[step] = man_arr[step]
-            # fit_res[fit.proxy(step)] = fit[step]
     except StopIteration:
         pass
 
     print(f"{v}/{n} = {v / n * 100}%")
-
-    # driver = gdal.GetDriverByName("GTiff")
-    # ds = driver.CreateCopy("/tmp/mannings.tif", man) 
-    # ds.GetRasterBand(1).WriteArray(man_res)
-
-    # ds = driver.CreateCopy("/tmp/fit.tif", vp)
-    # ds.GetRasterBand(1).WriteArray(fit_res)
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
